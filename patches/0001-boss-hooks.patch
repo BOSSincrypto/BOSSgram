@@ -1,0 +1,23 @@
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
+@@ -XXX,XX +XXX,XX @@ public class ApplicationLoader extends Application {
+         // BOSSgram hook 1/3: init modules once. Keep this single line, do not add logic here.
++        com.bossgram.core.BossHooks.init(this);
+         // ... rest of onCreate untouched
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+@@ -XXX,XX +XXX,XX @@ public class MessagesController extends BaseController {
+     // find deleteMessages / deleteMessagesByIds. Insert ONE line at method start:
+     public void deleteMessages(...) {
++        com.bossgram.core.BossHooks.onMessagesDeleted(dialogId, messageIds, messagesSnapshotOrNull);
+         // ... rest untouched. If signature changed in new Telegram version,
+         // update BossHooks.onMessagesDeleted signature, not module code.
+     }
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
+@@ -XXX,XX +XXX,XX @@ public class ChatActivity extends BaseFragment {
+     // find onViewCreated / createView end. Insert ONE line:
++        com.bossgram.core.BossHooks.onChatOpened(this);
+         // ... rest untouched
