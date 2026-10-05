@@ -16,7 +16,7 @@ ALLOW_RE = re.compile(r"BossHooks\.(init|onMessagesDeleted|onChatOpened|applyCus
 TM = ROOT / "TMessagesProj"
 if not TM.exists():
     print("OK (skeleton): no TMessagesProj here, nothing to leak yet.")
-    print("Rule: свой код только в bossgram/, в org.telegram.* только 3 строки BossHooks.")
+    print("Rule: свой код только в bossgram/, в org.telegram.* только 5 строк BossHooks.")
     sys.exit(0)
 
 bad = []

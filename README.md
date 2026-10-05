@@ -10,8 +10,9 @@ DrKLO/Telegram — монолит, plugin ABI нет. Внутренние кл�
 
 - форк + `upstream` remote
 - свой код только в `bossgram/`, чужие файлы не трогать
-- касание upstream: 3 однострочных хука
+- касание upstream: 5 однострочных хуков (`patches/0001-boss-hooks.patch`, `git apply --check` зелен)
 - обновление: `tools/sync-upstream.ps1`, конфликты только в хуках
+- настройки: диплинк `bossgram://settings` → `BossSettingsActivity` (без правок UI Telegram)
 
 Так делают Nekogram, Catogram, etc.
 
@@ -31,10 +32,12 @@ BOSSgram/
         AntiDeleteModule.java
         ChatFilter.java
         AntiDeleteStore.java
+        BossSettingsActivity.java  # экран настроек BossGram
+        BossSavedActivity.java     # просмотр сохраненных + очистка
       themes/                # UI/темы-заглушка
         ThemesModule.java
   patches/
-    0001-boss-hooks.patch    # 3 однострочных вставки в upstream, больше ничего
+    0001-boss-hooks.patch    # 5 однострочных вставок в upstream, больше ничего
   tools/
     sync-upstream.ps1/.sh    # обновление на новую версию Telegram
     check-touch-points.py    # контроль: свой код не расползся по upstream
@@ -61,6 +64,17 @@ git -C ../Telegram-upstream apply ../BOSSgram/patches/0001-boss-hooks.patch
 
 # 4. собрать как обычный Telegram (api_id, google-services.json, BuildVars.java)
 ```
+
+## Проверка перед каждым коммитом (обязательно)
+
+```powershell
+python tools/check-touch-points.py
+python tools/security-check.py
+git status --short   # только intended файлы
+git diff             # прочитать весь diff глазами
+```
+
+Полный регламент: `docs/SECURITY.md` (секреты, бэкдоры, уязвимости, баги). Ноль BLOCKER — иначе не коммитим.
 
 Полно: `docs/ARCHITECTURE.md`, обновление: `docs/UPDATE.md`.
 

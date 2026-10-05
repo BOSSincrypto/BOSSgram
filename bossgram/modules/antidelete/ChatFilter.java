@@ -24,9 +24,24 @@ public class ChatFilter {
         return mode == Mode.ALL_EXCEPT ? !inList : inList;
     }
 
+    public boolean isEnabled() { return p.getBoolean("enabled", true); }
+
     public void setEnabled(boolean v) { p.edit().putBoolean("enabled", v).apply(); }
 
+    public Mode getMode() {
+        try { return Mode.valueOf(p.getString("mode", Mode.ALL_EXCEPT.name())); }
+        catch (IllegalArgumentException e) { return Mode.ALL_EXCEPT; }
+    }
+
     public void setMode(Mode m) { p.edit().putString("mode", m.name()).apply(); }
+
+    public java.util.Set<Long> getListIds() {
+        java.util.Set<Long> out = new java.util.HashSet<>();
+        for (String s : p.getStringSet("list", new HashSet<>())) {
+            try { out.add(Long.parseLong(s)); } catch (NumberFormatException ignore) {}
+        }
+        return out;
+    }
 
     public void setList(Set<Long> ids) {
         Set<String> s = new HashSet<>();
@@ -42,4 +57,7 @@ public class ChatFilter {
 
     public int maxPerChat() { return p.getInt("max_per_chat", 500); }
     public int maxAgeDays() { return p.getInt("max_age_days", 30); }
+
+    public void setMaxPerChat(int v) { p.edit().putInt("max_per_chat", v).apply(); }
+    public void setMaxAgeDays(int v) { p.edit().putInt("max_age_days", v).apply(); }
 }

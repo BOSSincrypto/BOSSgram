@@ -1,0 +1,210 @@
+package com.bossgram.modules.antidelete;
+
+import android.content.Context;
+import android.text.InputType;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.Toast;
+
+import com.bossgram.core.BossHooks;
+import com.bossgram.api.BossModule;
+
+import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.R;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.AlertDialog;
+import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Cells.HeaderCell;
+import org.telegram.ui.Cells.TextCheckCell;
+import org.telegram.ui.Cells.TextSettingsCell;
+import org.telegram.ui.Components.LayoutHelper;
+
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * BossGram settings: AntiDelete toggle / mode / per-chat list / limits / cleanup + Themes stub.
+ * Opened via bossgram://settings deep-link (hook 5/5), no upstream UI edits.
+ */
+public class BossSettingsActivity extends BaseFragment {
+
+    private LinearLayout container;
+
+    @Override
+    public boolean onFragmentCreate() {
+        return super.onFragmentCreate();
+    }
+
+    @Override
+    public View createView(Context context) {
+        actionBar.setTitle("BossGram");
+        actionBar.setBackButtonImage(R.drawable.ic_ab_back);
+        actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
+            @Override
+            public void onItemClick(int id) {
+                if (id == -1) finishFragment();
+            }
+        });
+
+        fragmentView = new ScrollView(context);
+        ((ScrollView) fragmentView).setFillViewport(true);
+        container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        ((ScrollView) fragmentView).addView(container,
+                new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT, ScrollView.LayoutParams.WRAP_CONTENT));
+        fragmentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+
+        rebuild(context);
+        return fragmentView;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (container != null && getParentActivity() != null) rebuild(getParentActivity());
+    }
+
+    private AntiDeleteModule mod() {
+        for (BossModule m : BossHooks.modules()) {
+            if (m instanceof AntiDeleteModule) return (AntiDeleteModule) m;
+        }
+        return null;
+    }
+
+    private void rebuild(Context context) {
+        container.removeAllViews();
+        AntiDeleteModule m = mod();
+        if (m == null || m.filter() == null) {
+            HeaderCell h = new HeaderCell(context);
+            h.setText("Модуль анти-удаления не инициализирован");
+            container.addView(h, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            return;
+        }
+        ChatFilter f = m.filter();
+
+        HeaderCell h1 = new HeaderCell(context);
+        h1.setText("Анти-удаление");
+        container.addView(h1, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextCheckCell enable = new TextCheckCell(context);
+        enable.setTextAndCheck("Сохранять удаленные", f.isEnabled(), true);
+        enable.setOnClickListener(v -> {
+            f.setEnabled(!f.isEnabled());
+            enable.setChecked(f.isEnabled());
+        });
+        container.addView(enable, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextSettingsCell mode = new TextSettingsCell(context);
+        mode.setTextAndValue("Режим списка", f.getMode() == ChatFilter.Mode.ALL_EXCEPT ? "Все, кроме…" : "Только…", true);
+        mode.setOnClickListener(v -> {
+            f.setMode(f.getMode() == ChatFilter.Mode.ALL_EXCEPT ? ChatFilter.Mode.ONLY_LIST : ChatFilter.Mode.ALL_EXCEPT);
+            rebuild(context);
+        });
+        container.addView(mode, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextSettingsCell list = new TextSettingsCell(context);
+        list.setTextAndValue("Чаты в списке", String.valueOf(f.getListIds().size()), true);
+        list.setOnClickListener(v -> askIds(context, f));
+        container.addView(list, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextSettingsCell perChat = new TextSettingsCell(context);
+        perChat.setTextAndValue("Лимит на чат", String.valueOf(f.maxPerChat()), true);
+        perChat.setOnClickListener(v -> askInt(context, "Лимит на чат", f.maxPerChat(), 10, 5000,
+                val -> { f.setMaxPerChat(val); rebuild(context); }));
+        container.addView(perChat, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextSettingsCell age = new TextSettingsCell(context);
+        age.setTextAndValue("Хранить, дней", String.valueOf(f.maxAgeDays()), true);
+        age.setOnClickListener(v -> askInt(context, "Хранить, дней", f.maxAgeDays(), 1, 365,
+                val -> { f.setMaxAgeDays(val); rebuild(context); }));
+        container.addView(age, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextSettingsCell saved = new TextSettingsCell(context);
+        saved.setTextAndValue("Сохраненные", "просмотр и очистка", true);
+        saved.setOnClickListener(v -> presentFragment(new BossSavedActivity(), false, true));
+        container.addView(saved, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextSettingsCell clearAll = new TextSettingsCell(context);
+        clearAll.setText("Очистить всё сохраненное", false);
+        clearAll.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
+        clearAll.setOnClickListener(v -> confirm(context, "Удалить все сохраненные сообщения?", () -> {
+            m.store().clearAll();
+            Toast.makeText(context, "Очищено", Toast.LENGTH_SHORT).show();
+        }));
+        container.addView(clearAll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        HeaderCell h2 = new HeaderCell(context);
+        h2.setText("Темы");
+        container.addView(h2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextSettingsCell palette = new TextSettingsCell(context);
+        palette.setTextAndValue("Палитра", "по умолчанию", false);
+        palette.setOnClickListener(v ->
+                Toast.makeText(context, "Кастомные палитры — следующий шаг", Toast.LENGTH_SHORT).show());
+        container.addView(palette, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+    }
+
+    // ---- dialogs ----
+
+    private void askIds(Context context, ChatFilter f) {
+        StringBuilder sb = new StringBuilder();
+        for (Long id : f.getListIds()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(id);
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("ID чатов через запятую");
+        builder.setMessage("Узнать ID: перешли сообщение себе, ID виден в debug-меню. Пусто = очистить список.");
+        EditText input = new EditText(context);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setText(sb.toString());
+        int pad = AndroidUtilities.dp(16);
+        input.setPadding(pad, pad, pad, pad);
+        builder.setView(input);
+        builder.setPositiveButton("OK", (d, w) -> {
+            Set<Long> ids = new HashSet<>();
+            for (String part : input.getText().toString().split("[,\\s]+")) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                try { ids.add(Long.parseLong(part)); } catch (NumberFormatException ignore) {}
+            }
+            f.setList(ids);
+            rebuild(context);
+        });
+        builder.setNegativeButton("Отмена", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
+    private interface IntConsumer { void accept(int v); }
+
+    private void askInt(Context context, String title, int current, int min, int max, IntConsumer out) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(title);
+        EditText input = new EditText(context);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setText(String.valueOf(current));
+        int pad = AndroidUtilities.dp(16);
+        input.setPadding(pad, pad, pad, pad);
+        builder.setView(input);
+        builder.setPositiveButton("OK", (d, w) -> {
+            try {
+                int v = Integer.parseInt(input.getText().toString().trim());
+                out.accept(Math.max(min, Math.min(max, v)));
+            } catch (NumberFormatException ignore) {}
+        });
+        builder.setNegativeButton("Отмена", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
+    private void confirm(Context context, String text, Runnable onYes) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("BossGram");
+        builder.setMessage(text);
+        builder.setPositiveButton("Да", (d, w) -> onYes.run());
+        builder.setNegativeButton("Нет", (d, w) -> {});
+        showDialog(builder.create());
+    }
+}

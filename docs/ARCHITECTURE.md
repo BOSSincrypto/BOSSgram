@@ -9,24 +9,35 @@
 
 ## Слой касания (только это правится в upstream)
 
-Всего 3 точки. Все остальное — свой код.
+Всего 5 однострочников (`patches/0001-boss-hooks.patch`, проверен `git apply --check` на master Oct 2026).
+Все остальное — свой код.
 
-1. `org.telegram.messenger.ApplicationLoader#onCreate`
+1. `org.telegram.messenger.ApplicationLoader#onCreate` после `super.onCreate()`
    ```java
    com.bossgram.core.BossHooks.init(this);
    ```
-2. `org.telegram.messenger.MessagesController#deleteMessages` (или `deleteMessagesByIds`)
+2. `MessagesController#deleteMessages` полная 12-арг версия (строка ~9319), первая строка метода.
+   Все перегрузки стекаются сюда — одна точка покрывает свои удаления:
    ```java
-   com.bossgram.core.BossHooks.onMessagesDeleted(dialogId, messageIds, messages);
+   com.bossgram.core.BossHooks.onOwnMessagesDeleted(currentAccount, dialogId, messages);
    ```
-   Точное место зависит от версии — смотри `patches/0001-boss-hooks.patch`, там контекст ±3 строки. При конфликте правишь только эту строку.
-3. `org.telegram.ui.ChatActivity#onViewCreated` / `createView`
+3. `MessagesController#processUpdateArray` в `if (deletedMessages != null)` — чужие удаления (собеседник/с сервера), ДО постановки в storage queue, память еще читаема:
+   ```java
+   com.bossgram.core.BossHooks.onRemoteMessagesDeleted(currentAccount, deletedMessages);
+   ```
+   Ключи map: `-channelId` для каналов напрямую, `0` для личек (dialog резолвится по каждому id через `dialogMessagesByIds` + `MessageObject.getDialogId()`, нерезолвимое пропускается).
+4. `org.telegram.ui.ChatActivity#onResume` после `super.onResume()` — зарезервировано под бейдж:
    ```java
    com.bossgram.core.BossHooks.onChatOpened(this);
    ```
-   Нужно для бейджа "сохранено" и кнопки очистки.
+5. `org.telegram.ui.LaunchActivity#onNewIntent` после `super.onNewIntent()` — вход в настройки без хирургии UI:
+   ```java
+   if (com.bossgram.core.BossHooks.onNewIntent(this, intent)) return;
+   ```
+   Открывает `BossSettingsActivity` по диплинку `bossgram://settings`.
 
-Больше ничего в `org.telegram.*` не трогать. Проверяется скриптом `tools/check-touch-points.py`.
+Снапшот текста: только из памяти (`dialogMessagesByIds` + `dialogMessage`), fallback `""`.
+Запись в sidecar — на `MessagesStorage` queue, не на UI-потоке. Хуки никогда не кидают наружу.
 
 ## Жизнь модуля
 
@@ -60,6 +71,12 @@ Telegram вызывает deleteMessages
 
 ## Что ломается при обновлении и где чинить
 
-- Переименовали `deleteMessages` -> правишь 1 строку в `BossHooks` + контекст патча. Свои модули не трогаешь.
-- Поменяли `ChatActivity` -> правишь только `onChatOpened`.
+- Переименовали `deleteMessages` / `processUpdateArray` -> правишь 1 строку в `BossHooks` + контекст патча. Свои модули не трогаешь.
+- Поменяли `ChatActivity.onResume` / `LaunchActivity.onNewIntent` -> правишь только хук.
 - Поменяли БД -> тебя не касается (sidecar).
+- Поменяли `SettingsActivity`/ячейки -> тебя не касается (свои экраны на стабильных `TextCheckCell`/`TextSettingsCell`/`HeaderCell`).
+
+## Как открыть настройки
+
+Диплинк `bossgram://settings` (обрабатывает хук 5/5). Отправить себе в Избранное ссылку `bossgram://settings` и тапнуть.
+Экран: `BossSettingsActivity` — тумблер, режим списка, ID чатов, лимиты, "Сохраненные" (`BossSavedActivity`: просмотр + очистка по чату/всё).

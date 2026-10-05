@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -38,11 +39,44 @@ public class AntiDeleteStore {
 
     public synchronized List<String> listTexts(long dialogId, int limit) {
         List<String> out = new ArrayList<>();
+        for (Entry e : listEntries(dialogId, limit)) out.add(e.text);
+        return out;
+    }
+
+    public static class Entry {
+        public final int id;
+        public final String text;
+        public final long ts;
+        public Entry(int id, String text, long ts) { this.id = id; this.text = text; this.ts = ts; }
+    }
+
+    public synchronized List<Entry> listEntries(long dialogId, int limit) {
+        List<Entry> out = new ArrayList<>();
         JSONArray arr = loadArr(dialogId);
         for (int i = Math.max(0, arr.length() - limit); i < arr.length(); i++) {
-            out.add(arr.optJSONObject(i).optString("text", ""));
+            JSONObject o = arr.optJSONObject(i);
+            if (o == null) continue;
+            out.add(new Entry(o.optInt("id"), o.optString("text", ""), o.optLong("ts", 0)));
         }
         return out;
+    }
+
+    public synchronized List<Long> listDialogs() {
+        List<Long> out = new ArrayList<>();
+        File[] fs = dir.listFiles();
+        if (fs == null) return out;
+        for (File f : fs) {
+            String n = f.getName();
+            if (!n.endsWith(".json")) continue;
+            try { out.add(Long.parseLong(n.substring(0, n.length() - 5))); }
+            catch (NumberFormatException ignore) {}
+        }
+        Collections.sort(out);
+        return out;
+    }
+
+    public synchronized int countFor(long dialogId) {
+        return loadArr(dialogId).length();
     }
 
     public synchronized void clearChat(long dialogId) {
