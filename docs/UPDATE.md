@@ -43,9 +43,12 @@ git rebase --continue
 
 ```powershell
 python tools/check-touch-points.py
-# OK: upstream touched only by hooks
+python tools/security-check.py
+# OK: upstream touched only by hooks, blockers 0
 .\gradlew :TMessagesProj:assembleAfatDebug # в папке сборки Telegram
 ```
+
+Smoke: открыть чат, удалить сообщение, проверить сохранение + очистку. Полный регламент: `docs/SECURITY.md`.
 
 ## Правила BuildVars / ключи (важно, иначе не соберется)
 

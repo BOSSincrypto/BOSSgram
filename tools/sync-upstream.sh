@@ -17,6 +17,7 @@ if [ -f patches/0001-boss-hooks.patch ]; then
     echo "hooks patch already in history or needs refresh — ok"
   fi
 fi
-echo "== check touch points =="
+echo "== check touch points + security =="
 python3 tools/check-touch-points.py
+python3 tools/security-check.py
 echo "done: скопируй bossgram/ в сборку Telegram и собери."

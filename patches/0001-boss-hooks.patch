@@ -1,23 +1,44 @@
+BOSSgram hooks v1 — 5 one-liners against DrKLO/Telegram master (Oct 2026).
+All BOSSgram logic lives in com.bossgram.* (copied alongside TMessagesProj sources at build time).
+On upstream update: if a hunk rejects, re-anchor the single added line, keep everything else.
+
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
 +++ b/TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java
-@@ -XXX,XX +XXX,XX @@ public class ApplicationLoader extends Application {
-         // BOSSgram hook 1/3: init modules once. Keep this single line, do not add logic here.
+@@ -291,4 +291,7 @@ public class ApplicationLoader extends Application {
+         super.onCreate();
+ 
++        // BOSSgram hook 1/5: init modules once. Keep this single line, no logic here.
 +        com.bossgram.core.BossHooks.init(this);
-         // ... rest of onCreate untouched
-
++
+         // AndroidUtilities must be initialized before FileLog
+         final String helloWorld = AndroidUtilities.getHelloWorld();
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
 +++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
-@@ -XXX,XX +XXX,XX @@ public class MessagesController extends BaseController {
-     // find deleteMessages / deleteMessagesByIds. Insert ONE line at method start:
-     public void deleteMessages(...) {
-+        com.bossgram.core.BossHooks.onMessagesDeleted(dialogId, messageIds, messagesSnapshotOrNull);
-         // ... rest untouched. If signature changed in new Telegram version,
-         // update BossHooks.onMessagesDeleted signature, not module code.
-     }
-
+@@ -9319,2 +9319,4 @@ public class MessagesController extends BaseController {
+     public void deleteMessages(ArrayList<Integer> messages, ArrayList<Long> randoms, TLRPC.EncryptedChat encryptedChat, long dialogId, boolean forAll, int mode, boolean cacheOnly, long taskId, TLObject taskRequest, int topicId, boolean movedToScheduled, int movedToScheduledMessageId) {
++        // BOSSgram hook 2/5: snapshot own-side deletes BEFORE any marking. All overloads funnel here.
++        com.bossgram.core.BossHooks.onOwnMessagesDeleted(currentAccount, dialogId, messages);
+         final boolean scheduled = mode == ChatActivity.MODE_SCHEDULED;
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+@@ -21210,3 +21210,6 @@ public class MessagesController extends BaseController {
+         if (deletedMessages != null) {
++            // BOSSgram hook 3/5: snapshot remote deletes (other side / sync) BEFORE storage queue marks them.
++            // Runs on UI thread here, in-memory MessageObjects still readable.
++            com.bossgram.core.BossHooks.onRemoteMessagesDeleted(currentAccount, deletedMessages);
+             for (int a = 0, size = deletedMessages.size(); a < size; a++) {
+                 long key = deletedMessages.keyAt(a);
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java
-@@ -XXX,XX +XXX,XX @@ public class ChatActivity extends BaseFragment {
-     // find onViewCreated / createView end. Insert ONE line:
+@@ -29771,2 +29771,4 @@ public class ChatActivity extends BaseFragment {
+         super.onResume();
++        // BOSSgram hook 4/5: per-chat badge / "saved" indicator entry point.
 +        com.bossgram.core.BossHooks.onChatOpened(this);
-         // ... rest untouched
+         checkShowBlur(false);
+--- a/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java
+@@ -6124,2 +6124,4 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
+         super.onNewIntent(intent);
++        // BOSSgram hook 5/5: deep-link entry "bossgram://settings" opens BossGram settings, no UI surgery.
++        if (com.bossgram.core.BossHooks.onNewIntent(this, intent)) return;
+         handleIntent(intent, true, false, false, null, true, true);

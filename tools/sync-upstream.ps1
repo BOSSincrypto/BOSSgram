@@ -23,8 +23,9 @@ if (Test-Path "patches/0001-boss-hooks.patch") {
   else { Write-Host "hooks patch already in history or needs refresh — ok" -ForegroundColor DarkGray }
 }
 
-Step "check touch points"
+Step "check touch points + security"
 python tools/check-touch-points.py
+python tools/security-check.py
 
 Step "done"
 Write-Host "Дальше: скопируй bossgram/ в сборку Telegram и собери." -ForegroundColor Green
