@@ -1,0 +1,60 @@
+BOSSgram native module hooks v1 (DrKLO/Telegram master, Oct 2026).
+Native ports of audited plugins (see docs/PLUGINS.md): AccountHider, AddToFolder, AntiSpoiler.
+All logic in com.bossgram.modules.*; single lines here only.
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/MainTabsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/MainTabsActivity.java
+@@ -619,6 +619,8 @@
+             }
+             return 0;
+         });
++        // BOSSgram: AccountHider — drop hidden accounts from the picker.
++        com.bossgram.core.BossHooks.filterHiddenAccounts(accountNumbers);
+ 
+         ItemOptions o = ItemOptions.makeOptions(this, button);
+         if (UserConfig.getActivatedAccountsCount() < UserConfig.MAX_ACCOUNT_COUNT) {
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+@@ -14381,6 +14381,8 @@
+             }
+             return 0;
+         });
++        // BOSSgram: AccountHider — drop hidden accounts from the picker.
++        com.bossgram.core.BossHooks.filterHiddenAccounts(accountNumbers);
+ 
+         ItemOptions o = ItemOptions.makeOptions(this, view);
+         if (accountNumbers.size() > 0) {
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
+@@ -636,6 +636,8 @@
+             }
+             return 0;
+         });
++        // BOSSgram: AccountHider — drop hidden accounts from settings list.
++        com.bossgram.core.BossHooks.filterHiddenAccounts(accountNumbers);
+ 
+         final Set<String> suggestions = getMessagesController().pendingSuggestions;
+         if (suggestions.contains("PREMIUM_GRACE")) {
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java
+@@ -9946,4 +9946,6 @@
+                 addToFolderItem.setVisibility(View.GONE);
+             }
+         }
++        // BOSSgram: AddToFolder — show the button inside folders too.
++        com.bossgram.core.BossHooks.onDialogsCountersUpdated(this, addToFolderItem, filterTabsView, folderId);
+         if (muteItem != null) {
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java
+@@ -13340,5 +13340,7 @@
+                                  boolean topNear,
+                                  boolean firstInChat,
+                                  boolean lastInChatList) {
++        // BOSSgram: AntiSpoiler — reveal text/media spoilers automatically.
++        com.bossgram.core.BossHooks.onMessageBound(messageObject);
+         if (attachedToWindow && !frozen) {
+             setMessageContent(messageObject, groupedMessages, bottomNear, topNear, firstInChat, lastInChatList);

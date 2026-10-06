@@ -13,9 +13,9 @@
 | `always-tabs-forums` 1.0.3 | ВЗЯТ | Подмена `ChatObject.areTabsEnabled`. 50 строк, чисто |
 | `account_age_checker` 5.2 | ВЗЯТ С ОГОВОРКОЙ | Логика чистая, но хост — ExteraGram SDK (`PluginsController`, `ui.*`) + платный внешний API `api.datereg.pro` (ключ вводит юзер). Порт требует адаптера |
 | `ai_tools_beta` 1.0.0 @AGeekApple | ОТКЛОНЕН: ВРЕДОНОС | Однобуквенная обфускация (`k/u/g/f`), скрытый base64 URL `https://rutube.ru/play/embed/.../?autoplay=1`, fullscreen WebView + JS + автоплей под видом "AI Tools". Кликфрод. НЕ запускать, НЕ вендорить |
-| `account_hider` 1.0.1 | ОТКЛОНЕН: БЛОБ | `DEX_B64` + `InMemoryDexClassLoader`, содержимое непроверяемо. Только с исходниками |
-| `add_to_folder` 1.0 | ОТКЛОНЕН: БЛОБ | Python-часть чистая, но хвост `__DEX_BEGIN__` (zlib+base64, содержимое неизвестно). Только без блоба |
-| `anti_spoiler` 2.0 | ОТКЛОНЕН: БЛОБ | SHA-256 пиннинг — хорошая практика, но пейлоад непроверяем. Только с исходниками |
+| `account_hider` 1.0.1 | ПОРТИРОВАН В НАТИВ | Блоб отклонен, функция переписана: `bossgram/modules/accounthider` |
+| `add_to_folder` 1.0 | ПОРТИРОВАН В НАТИВ | Блоб отклонен, функция переписана: `bossgram/modules/addtofolder` |
+| `anti_spoiler` 2.0 | ПОРТИРОВАН В НАТИВ | Блоб отклонен, функция переписана: `bossgram/modules/antispoiler` |
 
 ## Почему не "просто запустить .py"
 
@@ -26,10 +26,13 @@
 
 ## Дорога (честно)
 
-1. ✅ Аудит + вендор чистых + статусы в настройках (этот коммит)
-2. Нативные порты дешевого: `AdBlock` = 1 хук на `ConnectionsManager.sendRequest` + no-op `checkPromoInfo`
-   (оценка: +1 хук в патч 0001, +1 BossModule)
-3. Хост-рантайм Python (Chaquopy) + адаптеры SDK — отдельным проектом, после стабильности ядра
+1. ✅ Аудит + вендор чистых + статусы в настройках
+2. ✅ Нативные порты БЕЗ блобов (этот коммит, патч `0003-boss-native-modules.patch`):
+   - `account_hider` → `bossgram/modules/accounthider` (фильтр списков аккаунтов в 3 пикерах)
+   - `add_to_folder` → `bossgram/modules/addtofolder` (кнопка внутри папок, 1 хук в `updateCounters`)
+   - `anti_spoiler` → `bossgram/modules/antispoiler` (автораскрытие через флаги `MessageObject`)
+3. Следующий кандидат: `AdBlock` = 1 хук на `ConnectionsManager.sendRequest` + no-op `checkPromoInfo`
+4. Хост-рантайм Python (Chaquopy) + адаптеры SDK — отдельным проектом, после стабильности ядра
 
 ## Политика добавления новых плагинов
 

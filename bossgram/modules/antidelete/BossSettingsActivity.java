@@ -155,6 +155,82 @@ public class BossSettingsActivity extends BaseFragment {
         palette.setOnClickListener(v ->
                 Toast.makeText(context, "Кастомные палитры — следующий шаг", Toast.LENGTH_SHORT).show());
         container.addView(palette, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        addAccountHider(context);
+        addFolderSpoiler(context);
+    }
+
+    private com.bossgram.modules.accounthider.AccountHiderModule hider() {
+        for (BossModule m : BossHooks.modules()) {
+            if (m instanceof com.bossgram.modules.accounthider.AccountHiderModule) {
+                return (com.bossgram.modules.accounthider.AccountHiderModule) m;
+            }
+        }
+        return null;
+    }
+
+    private void addAccountHider(Context context) {
+        com.bossgram.modules.accounthider.AccountHiderModule m = hider();
+        if (m == null) return;
+
+        HeaderCell h = new HeaderCell(context);
+        h.setText("Скрытые аккаунты");
+        container.addView(h, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextCheckCell enable = new TextCheckCell(context);
+        enable.setTextAndCheck("Скрывать выбранные", m.isEnabled(), true);
+        enable.setOnClickListener(v -> {
+            m.setEnabled(!m.isEnabled());
+            enable.setChecked(m.isEnabled());
+        });
+        container.addView(enable, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        java.util.Set<Integer> hidden = m.getHidden();
+        for (int a = 0; a < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!org.telegram.messenger.UserConfig.getInstance(a).isClientActivated()) continue;
+            org.telegram.tgnet.TLRPC.User u = org.telegram.messenger.UserConfig.getInstance(a).getCurrentUser();
+            String name = u != null ? org.telegram.messenger.UserObject.getUserName(u) : ("Аккаунт " + (a + 1));
+            if (a == getCurrentAccount()) name += " (текущий)";
+            final int acc = a;
+            TextCheckCell row = new TextCheckCell(context);
+            row.setTextAndCheck(name, hidden.contains(a), true);
+            row.setOnClickListener(v -> {
+                m.setHidden(acc, !m.getHidden().contains(acc));
+                row.setChecked(m.getHidden().contains(acc));
+            });
+            container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+    }
+
+    private void addFolderSpoiler(Context context) {
+        HeaderCell h = new HeaderCell(context);
+        h.setText("Папки и спойлеры");
+        container.addView(h, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        for (BossModule m : BossHooks.modules()) {
+            if (m instanceof com.bossgram.modules.addtofolder.AddToFolderModule) {
+                com.bossgram.modules.addtofolder.AddToFolderModule mod =
+                        (com.bossgram.modules.addtofolder.AddToFolderModule) m;
+                TextCheckCell row = new TextCheckCell(context);
+                row.setTextAndCheck("«В папку» внутри папок", mod.isEnabled(), true);
+                row.setOnClickListener(v -> {
+                    mod.setEnabled(!mod.isEnabled());
+                    row.setChecked(mod.isEnabled());
+                });
+                container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            }
+            if (m instanceof com.bossgram.modules.antispoiler.AntiSpoilerModule) {
+                com.bossgram.modules.antispoiler.AntiSpoilerModule mod =
+                        (com.bossgram.modules.antispoiler.AntiSpoilerModule) m;
+                TextCheckCell r2 = new TextCheckCell(context);
+                r2.setTextAndCheck("Раскрывать спойлеры", mod.isEnabled(), false);
+                r2.setOnClickListener(v -> {
+                    mod.setEnabled(!mod.isEnabled());
+                    r2.setChecked(mod.isEnabled());
+                });
+                container.addView(r2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            }
+        }
     }
 
     // ---- dialogs ----

@@ -78,7 +78,17 @@ gradle :TMessagesProj_App:assembleDebug
 1. Тот же `applicationId` (`com.bossgram.messenger`, патч 0002) — смена пакета = новое приложение, данные не переносятся.
 2. Та же подпись — один keystore на все релизы. Debug сейчас подписывается dummy `release.keystore`
    из upstream; для своих релизов заведи свой keystore и храни вне гита (потеря = все переустанавливают).
-3. Растущий `APP_VERSION_CODE` в `gradle.properties` (+1 каждый выпуск).
+3. Растущий `APP_VERSION_CODE` в `gradle.properties` (+1 каждый выпуск):
+
+```powershell
+python tools/bump-version.py   # +1 к APP_VERSION_CODE в дереве сборки
+gradle :TMessagesProj_App:assembleDebug
+python tools/check-apk.py ..\Telegram-upstream\TMessagesProj_App\build\outputs\apk\afat\debug\app.apk
+# сверь CERT SHA-256 с прошлым релизом: совпал = встанет поверх
+```
+
+Базовый cert dummy-подписи (debug, Oct 2026): `a08d7dc323ddf71ef3201944397e0d3cce7d40847263e11f328b68bbe19229ab`.
+Свой релизный keystore даст другой отпечаток — зафиксируй его здесь же при переходе.
 
 Установка поверх: `adb install -r app.apk` или открыть APK на телефоне → "Обновить". Данные, чаты,
 сохраненные анти-удалением — на месте.
