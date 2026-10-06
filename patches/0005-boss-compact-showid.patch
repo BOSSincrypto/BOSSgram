@@ -1,0 +1,46 @@
+BOSSgram compact/showid hooks v2 (DrKLO/Telegram master, Oct 2026).
+Native ports of plugin-need (see docs/PLUGINS.md): compacttext, showid.
+All logic in com.bossgram.modules.*; single lines here only.
+Anchors verified against upstream master 12.10.6 (7112).
+On reject: re-anchor the single added line, keep everything else.
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/SendMessagesHelper.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/SendMessagesHelper.java
+@@ -sendMessage(SendMessageParams sendMessageParams)
+         long peer = sendMessageParams.peer;
++        // BOSSgram: CompactText — pack long texts into a file, consume when true.
++        if (message != null && com.bossgram.core.BossHooks.interceptSendMessage(currentAccount, peer, message)) return;
+         String path = sendMessageParams.path;
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAvatarContainer.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAvatarContainer.java
+@@ -setSubtitle(CharSequence value)
+     public void setSubtitle(CharSequence value) {
++        // BOSSgram: ShowId — append dialog ID to subtitle (display only, no dup).
++        try {
++            if (parentFragment != null && value != null) {
++                String bossId = com.bossgram.core.BossHooks.dialogIdLine(parentFragment.getDialogId(), currentAccount);
++                if (bossId != null && !bossId.isEmpty()) {
++                    String s = value.toString();
++                    if (!s.contains(bossId)) value = s + " · " + bossId;
++                }
++            }
++        } catch (Throwable ignore) {}
+         if (lastSubtitle == null) {
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
+@@ -status text applied to onlineTextView
+                 } else {
+                     onlineTextView[a].setText(newString2);
+                 }
++                // BOSSgram: ShowId — ID under status (display only, no dup).
++                try {
++                    String bossId = com.bossgram.core.BossHooks.dialogIdLine(getDialogId(), currentAccount);
++                    if (bossId != null && !bossId.isEmpty() && onlineTextView[a] != null) {
++                        CharSequence cur = onlineTextView[a].getText();
++                        String s = cur == null ? "" : cur.toString();
++                        if (!s.contains(bossId)) onlineTextView[a].setText(s.isEmpty() ? bossId : s + "\n" + bossId);
++                    }
++                } catch (Throwable ignore) {}
+                 onlineTextView[a].setDrawablePadding(dp(9));

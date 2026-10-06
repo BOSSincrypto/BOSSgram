@@ -20,6 +20,10 @@ public final class ModuleRegistry {
         MODULES.add(new com.bossgram.modules.accounthider.AccountHiderModule());
         MODULES.add(new com.bossgram.modules.addtofolder.AddToFolderModule());
         MODULES.add(new com.bossgram.modules.antispoiler.AntiSpoilerModule());
+        MODULES.add(new com.bossgram.modules.chatsummary.ChatSummaryModule());
+        MODULES.add(new com.bossgram.modules.chatexport.ChatExportModule());
+        MODULES.add(new com.bossgram.modules.compacttext.CompactTextModule());
+        MODULES.add(new com.bossgram.modules.showid.ShowIdModule());
     }
 
     private ModuleRegistry() {}
