@@ -149,6 +149,89 @@ public final class BossHooks {
         return ModuleRegistry.all();
     }
 
+    /** AdBlock: suppress promo checks/dialogs/video ads. */
+    public static boolean blockPromo() {
+        if (!inited) return false;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.adblock.AdBlockModule) {
+                    return ((com.bossgram.modules.adblock.AdBlockModule) m).isEnabled();
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return false;
+    }
+
+    /** AccountLimit: pretend premium for account-limit UI only (stack-checked in module). */
+    public static boolean unlockAccountLimit() {
+        if (!inited) return false;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.accountlimit.AccountLimitModule) {
+                    return ((com.bossgram.modules.accountlimit.AccountLimitModule) m).unlockForLimitUi();
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return false;
+    }
+
+    /** ForumTabs: force tab view in forums. Null = fall through to stock logic. */
+    public static Boolean forumTabs(Object chat) {
+        if (!inited) return null;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.forumtabs.ForumTabsModule) {
+                    return ((com.bossgram.modules.forumtabs.ForumTabsModule) m)
+                            .forumTabs((org.telegram.tgnet.TLRPC.Chat) chat);
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return null;
+    }
+
+    /** GlobalSearch: MentionsAdapter.setSearchingMentions changed. */
+    public static void onSearchModeChanged(Object adapter, boolean enabled) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.globalsearch.GlobalSearchModule) {
+                    ((com.bossgram.modules.globalsearch.GlobalSearchModule) m)
+                            .onSearchModeChanged(adapter, enabled);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+    /** GlobalSearch: MentionsAdapter.searchUsernameOrHashtag called. */
+    public static void onSearchQuery(Object adapter, CharSequence text, boolean usernameOnly, boolean forSearch) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.globalsearch.GlobalSearchModule) {
+                    ((com.bossgram.modules.globalsearch.GlobalSearchModule) m)
+                            .onSearchQuery(adapter, text, usernameOnly, forSearch);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+    /** GlobalSearch: start of MentionsAdapter.showUsersResult — lists in scope, merged in place. */
+    public static void mergeSearchUsers(Object adapter, java.util.ArrayList newResult,
+                                        androidx.collection.LongSparseArray newMap) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.globalsearch.GlobalSearchModule) {
+                    ((com.bossgram.modules.globalsearch.GlobalSearchModule) m)
+                            .mergeSearchUsers(adapter, newResult, newMap);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
     // ---- internals ----
 
     private static void routeToAntiDelete(int account, long dialogId, List<Integer> ids, List<String> texts) {
