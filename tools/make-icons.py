@@ -1,7 +1,14 @@
-r"""Generate BOSSgram launcher art (dark + orange B) for Telegram icon_6_* slots.
+r"""Generate BOSSgram launcher art (dark + orange B).
+
+Covers BOTH launcher chains actually used by the app:
+- icon_6_* (activity-alias icons)
+- ic_launcher* / icon_foreground* / icon_background* / icon_plane (the effective
+  launcher, see aapt dump badging -> mipmap-anydpi-v26/ic_launcher.xml)
 
 Output mirrors upstream res layout so it can be copied over:
-  bossgram/assets/icons/mipmap-<dpi>/icon_6_<variant>.png
+  bossgram/assets/icons/mipmap-<dpi>/*.png
+  bossgram/assets/icons/drawable-<dpi>/ic_launcher_dr.webp
+(Vector/xml slots icon_*_background_sa.xml and icon_plane.xml ship in patches/0002.)
 Usage: python tools/make-icons.py
 Then: xcopy bossgram\assets\icons ..\Telegram-upstream\TMessagesProj\src\main\res /E /Y
 """
@@ -76,6 +83,18 @@ def main():
         fg.save(d / "icon_6_foreground.png")
         fg.save(d / "icon_6_foreground_sa.png")
         circle_mask(fg).save(d / "icon_6_foreground_round.png")
+
+        # ic_launcher chain (the effective launcher): same art, telegram names
+        icon.save(d / "ic_launcher.png")
+        circ.save(d / "ic_launcher_round.png")
+        fg.save(d / "icon_foreground.png")
+        fg.save(d / "icon_foreground_sa.png")
+        circle_mask(fg).save(d / "icon_foreground_round.png")
+
+        # direct-share webp
+        dd = OUT / f"drawable-{dpi}"
+        dd.mkdir(parents=True, exist_ok=True)
+        icon.save(dd / "ic_launcher_dr.webp", format="WEBP", quality=90)
 
     total = len(list(OUT.rglob("*.png")))
     print(f"OK: {total} icons in {OUT}")
