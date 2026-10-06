@@ -1,0 +1,103 @@
+BOSSgram plugin-port hooks v1 (DrKLO/Telegram master, Oct 2026).
+Native ports of audited plugins (see docs/PLUGINS.md): adblock, accountlimit,
+forumtabs, globalsearch. All logic in com.bossgram.modules.*; single lines here only.
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+@@ -10858,3 +10858,5 @@
+     public void checkPromoInfo(final boolean reset) {
++        // BOSSgram: AdBlock — never start promo checks.
++        if (com.bossgram.core.BossHooks.blockPromo()) return;
+         Utilities.stageQueue.postRunnable(() -> checkPromoInfoInternal(reset));
+     }
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+@@ -10864,2 +10864,4 @@
+     private void checkPromoInfoInternal(boolean reset) {
++        // BOSSgram: AdBlock — never run promo checks.
++        if (com.bossgram.core.BossHooks.blockPromo()) return;
+         if (reset && checkingPromoInfo) {
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+@@ -11169,2 +11169,4 @@
+     public boolean isPromoDialog(long did, boolean checkLeft) {
++        // BOSSgram: AdBlock — no promo dialogs.
++        if (com.bossgram.core.BossHooks.blockPromo()) return false;
+         return promoDialog != null && promoDialog.id == did && (!checkLeft || isLeftPromoChannel);
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
+@@ -195,2 +195,4 @@
+     private void load() {
++        // BOSSgram: AdBlock — never load video ads.
++        if (com.bossgram.core.BossHooks.blockPromo()) return;
+         if (loading || loaded) return;
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
+@@ -234,2 +234,4 @@
+     private void schedule() {
++        // BOSSgram: AdBlock — never schedule video ads.
++        if (com.bossgram.core.BossHooks.blockPromo()) return;
+         AndroidUtilities.cancelRunOnUIThread(showRunnable);
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
+@@ -266,2 +266,4 @@
+     private void show() {
++        // BOSSgram: AdBlock — never show video ads.
++        if (com.bossgram.core.BossHooks.blockPromo()) return;
+         if (ads.isEmpty()) return;
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/video/VideoAds.java
+@@ -174,2 +174,4 @@
+     public boolean isPopupShown() {
++        // BOSSgram: AdBlock — ads never shown.
++        if (com.bossgram.core.BossHooks.blockPromo()) return false;
+         return currentMenu != null && currentMenu.isShown() || premiumSheet != null && premiumSheet.isShown();
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java
+@@ -115,2 +115,4 @@
+     public static boolean hasPremiumOnAccounts() {
++        // BOSSgram: AccountLimit — unlock 16 accounts for limit UI (stack-checked).
++        if (com.bossgram.core.BossHooks.unlockAccountLimit()) return true;
+         for (int a = 0; a < MAX_ACCOUNT_COUNT; a++) {
+
+--- a/TMessagesProj/src/main/java/org/telegram/messenger/ChatObject.java
++++ b/TMessagesProj/src/main/java/org/telegram/messenger/ChatObject.java
+@@ -2631,3 +2631,6 @@
+     public static boolean areTabsEnabled(TLRPC.Chat chat) {
++        // BOSSgram: ForumTabs — tab view in all forums.
++        Boolean bossTabs = com.bossgram.core.BossHooks.forumTabs(chat);
++        if (bossTabs != null) return bossTabs;
+         return SharedConfig.forceForumTabs || chat != null && chat.forum_tabs;
+     }
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Adapters/MentionsAdapter.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Adapters/MentionsAdapter.java
+@@ -804,3 +804,5 @@
+     public void setSearchingMentions(boolean value) {
+         isSearchingMentions = value;
++        // BOSSgram: GlobalSearch — track search mode per adapter.
++        com.bossgram.core.BossHooks.onSearchModeChanged(this, value);
+     }
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Adapters/MentionsAdapter.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Adapters/MentionsAdapter.java
+@@ -951,2 +951,4 @@
+     public void searchUsernameOrHashtag(CharSequence charSequence, int position, ArrayList<MessageObject> messageObjects, boolean usernameOnly, boolean forSearch) {
++        // BOSSgram: GlobalSearch — capture query for global user search.
++        com.bossgram.core.BossHooks.onSearchQuery(this, charSequence, usernameOnly, forSearch);
+         final String text = charSequence == null ? "" : charSequence.toString();
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Adapters/MentionsAdapter.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Adapters/MentionsAdapter.java
+@@ -1650,2 +1650,4 @@
+     private void showUsersResult(ArrayList<TLObject> newResult, LongSparseArray<TLObject> newMap, boolean notify) {
++        // BOSSgram: GlobalSearch — merge global users into result lists in place.
++        com.bossgram.core.BossHooks.mergeSearchUsers(this, newResult, newMap);
+         searchResultUsernames = newResult;

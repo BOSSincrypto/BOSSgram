@@ -149,7 +149,90 @@ public final class BossHooks {
         return ModuleRegistry.all();
     }
 
-    /** Hooks 6-8. AccountHider: drop hidden accounts from picker lists. Mutates in place. */
+    /** AdBlock: suppress promo checks/dialogs/video ads. */
+    public static boolean blockPromo() {
+        if (!inited) return false;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.adblock.AdBlockModule) {
+                    return ((com.bossgram.modules.adblock.AdBlockModule) m).isEnabled();
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return false;
+    }
+
+    /** AccountLimit: pretend premium for account-limit UI only (stack-checked in module). */
+    public static boolean unlockAccountLimit() {
+        if (!inited) return false;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.accountlimit.AccountLimitModule) {
+                    return ((com.bossgram.modules.accountlimit.AccountLimitModule) m).unlockForLimitUi();
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return false;
+    }
+
+    /** ForumTabs: force tab view in forums. Null = fall through to stock logic. */
+    public static Boolean forumTabs(Object chat) {
+        if (!inited) return null;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.forumtabs.ForumTabsModule) {
+                    return ((com.bossgram.modules.forumtabs.ForumTabsModule) m)
+                            .forumTabs((org.telegram.tgnet.TLRPC.Chat) chat);
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return null;
+    }
+
+    /** GlobalSearch: MentionsAdapter.setSearchingMentions changed. */
+    public static void onSearchModeChanged(Object adapter, boolean enabled) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.globalsearch.GlobalSearchModule) {
+                    ((com.bossgram.modules.globalsearch.GlobalSearchModule) m)
+                            .onSearchModeChanged(adapter, enabled);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+    /** GlobalSearch: MentionsAdapter.searchUsernameOrHashtag called. */
+    public static void onSearchQuery(Object adapter, CharSequence text, boolean usernameOnly, boolean forSearch) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.globalsearch.GlobalSearchModule) {
+                    ((com.bossgram.modules.globalsearch.GlobalSearchModule) m)
+                            .onSearchQuery(adapter, text, usernameOnly, forSearch);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+    /** GlobalSearch: start of MentionsAdapter.showUsersResult — lists in scope, merged in place. */
+    public static void mergeSearchUsers(Object adapter, java.util.ArrayList newResult,
+                                        androidx.collection.LongSparseArray newMap) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.globalsearch.GlobalSearchModule) {
+                    ((com.bossgram.modules.globalsearch.GlobalSearchModule) m)
+                            .mergeSearchUsers(adapter, newResult, newMap);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+    /** AccountHider: drop hidden accounts from picker lists. Mutates in place. */
     public static void filterHiddenAccounts(ArrayList<Integer> accounts) {
         if (!inited || accounts == null) return;
         try {
@@ -162,7 +245,7 @@ public final class BossHooks {
         } catch (Throwable t) { t.printStackTrace(); }
     }
 
-    /** Hook 9. AddToFolder: end of DialogsActivity.updateCounters (fields passed, no reflection). */
+    /** AddToFolder: end of DialogsActivity.updateCounters (fields passed, no reflection). */
     public static void onDialogsCountersUpdated(Object dialogsActivity, Object addToFolderItem,
                                                 Object filterTabsView, int folderId) {
         if (!inited) return;
@@ -177,7 +260,7 @@ public final class BossHooks {
         } catch (Throwable t) { t.printStackTrace(); }
     }
 
-    /** Hook 10. AntiSpoiler: start of ChatMessageCell.setMessageObject. */
+    /** AntiSpoiler: start of ChatMessageCell.setMessageObject. */
     public static void onMessageBound(Object messageObject) {
         if (!inited) return;
         try {
@@ -189,6 +272,7 @@ public final class BossHooks {
             }
         } catch (Throwable t) { t.printStackTrace(); }
     }
+
 
     // ---- internals ----
 

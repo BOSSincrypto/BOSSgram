@@ -10,7 +10,9 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ALLOW_RE = re.compile(
-    r"BossHooks\.(init|onOwnMessagesDeleted|onRemoteMessagesDeleted|onChatOpened|onNewIntent)"
+    r"BossHooks\.(init|onOwnMessagesDeleted|onRemoteMessagesDeleted|onChatOpened|onNewIntent"
+    r"|filterHiddenAccounts|onDialogsCountersUpdated|onMessageBound"
+    r"|blockPromo|unlockAccountLimit|forumTabs|onSearchModeChanged|onSearchQuery|mergeSearchUsers)"
     r"|// BOSSgram"  # branding/settings one-liners are commented as such
     r"|SettingCell\.Factory\.of\(100"
     r"|new com\.bossgram\.modules\.antidelete\.BossSettingsActivity\(\)"

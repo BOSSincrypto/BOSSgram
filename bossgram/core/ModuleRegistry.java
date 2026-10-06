@@ -12,6 +12,11 @@ public final class ModuleRegistry {
         // Register features here. One line per module, nothing in upstream changes.
         MODULES.add(new com.bossgram.modules.antidelete.AntiDeleteModule());
         MODULES.add(new com.bossgram.modules.themes.ThemesModule());
+        MODULES.add(new com.bossgram.modules.adblock.AdBlockModule());
+        MODULES.add(new com.bossgram.modules.accountlimit.AccountLimitModule());
+        MODULES.add(new com.bossgram.modules.forumtabs.ForumTabsModule());
+        MODULES.add(new com.bossgram.modules.globalsearch.GlobalSearchModule());
+        MODULES.add(new com.bossgram.modules.accountage.AccountAgeModule());
         MODULES.add(new com.bossgram.modules.accounthider.AccountHiderModule());
         MODULES.add(new com.bossgram.modules.addtofolder.AddToFolderModule());
         MODULES.add(new com.bossgram.modules.antispoiler.AntiSpoilerModule());

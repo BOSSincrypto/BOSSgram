@@ -156,21 +156,114 @@ public class BossSettingsActivity extends BaseFragment {
                 Toast.makeText(context, "Кастомные палитры — следующий шаг", Toast.LENGTH_SHORT).show());
         container.addView(palette, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        addAccountHider(context);
-        addFolderSpoiler(context);
+        addPluginPorts(context);
     }
 
-    private com.bossgram.modules.accounthider.AccountHiderModule hider() {
+    private void addToggle(Context context, String title, boolean checked, java.util.function.Consumer<Boolean> onFlip) {
+        TextCheckCell row = new TextCheckCell(context);
+        row.setTextAndCheck(title, checked, true);
+        row.setOnClickListener(v -> {
+            boolean nv = !row.isChecked();
+            row.setChecked(nv);
+            onFlip.accept(nv);
+        });
+        container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+    }
+
+    private <T extends BossModule> T findModule(Class<T> cls) {
         for (BossModule m : BossHooks.modules()) {
-            if (m instanceof com.bossgram.modules.accounthider.AccountHiderModule) {
-                return (com.bossgram.modules.accounthider.AccountHiderModule) m;
-            }
+            if (cls.isInstance(m)) return cls.cast(m);
         }
         return null;
     }
 
+    private void addPluginPorts(Context context) {
+        HeaderCell h = new HeaderCell(context);
+        h.setText("Порты плагинов");
+        container.addView(h, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        com.bossgram.modules.adblock.AdBlockModule ad = findModule(com.bossgram.modules.adblock.AdBlockModule.class);
+        if (ad != null) addToggle(context, "Блокировка рекламы", ad.isEnabled(), ad::setEnabled);
+
+        com.bossgram.modules.accountlimit.AccountLimitModule lim =
+                findModule(com.bossgram.modules.accountlimit.AccountLimitModule.class);
+        if (lim != null) addToggle(context, "До 16 аккаунтов", lim.isEnabled(), lim::setEnabled);
+
+        com.bossgram.modules.forumtabs.ForumTabsModule tabs =
+                findModule(com.bossgram.modules.forumtabs.ForumTabsModule.class);
+        if (tabs != null) addToggle(context, "Вкладки во всех форумах", tabs.isEnabled(), tabs::setEnabled);
+
+        com.bossgram.modules.globalsearch.GlobalSearchModule gs =
+                findModule(com.bossgram.modules.globalsearch.GlobalSearchModule.class);
+        if (gs != null) addToggle(context, "Глобальный поиск юзеров", gs.isEnabled(), gs::setEnabled);
+
+        com.bossgram.modules.accountage.AccountAgeModule age =
+                findModule(com.bossgram.modules.accountage.AccountAgeModule.class);
+        if (age != null) {
+            addToggle(context, "Проверка возраста аккаунта", age.isEnabled(), age::setEnabled);
+            TextSettingsCell check = new TextSettingsCell(context);
+            check.setTextAndValue("Проверить @username", "фото, DC, оценка", false);
+            check.setOnClickListener(v -> askAgeUsername(context, age));
+            container.addView(check, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+    }
+
+    private void askAgeUsername(Context context, com.bossgram.modules.accountage.AccountAgeModule age) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Возраст аккаунта");
+        builder.setMessage("Введи @username. Оценка — по дате самого старого фото профиля (нижняя граница).");
+        EditText input = new EditText(context);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        int pad = AndroidUtilities.dp(16);
+        input.setPadding(pad, pad, pad, pad);
+        builder.setView(input);
+        builder.setPositiveButton("Проверить", (d, w) -> {
+            String q = input.getText().toString().trim();
+            if (q.isEmpty()) return;
+            Toast.makeText(context, "Запрашиваю…", Toast.LENGTH_SHORT).show();
+            age.checkUsername(q, new com.bossgram.modules.accountage.AccountAgeModule.Listener() {
+                @Override public void onResult(com.bossgram.modules.accountage.AccountAgeModule.Report r) {
+                    showAgeReport(context, r);
+                }
+                @Override public void onError(String message) {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+        builder.setNegativeButton("Отмена", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
+    private void showAgeReport(Context context, com.bossgram.modules.accountage.AccountAgeModule.Report r) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(r.name).append("\nID: ").append(r.userId);
+        if (r.username != null && !r.username.isEmpty()) sb.append("\n@").append(r.username);
+        if (r.dcId != 0) sb.append("\nDC: ").append(r.dcId);
+        if (r.photosTotal >= 0) sb.append("\nФото: ").append(r.photosTotal);
+        if (r.earliestPhotoDate > 0) {
+            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("MM.yyyy", java.util.Locale.US);
+            sb.append("\nСтарейшее фото: ").append(f.format(new java.util.Date(r.earliestPhotoDate * 1000)));
+            sb.append("\nАккаунту не меньше: ").append(ageSince(r.earliestPhotoDate));
+        } else {
+            sb.append("\nВозраст: неизвестен (нет фото)");
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Возраст аккаунта");
+        builder.setMessage(sb.toString());
+        builder.setPositiveButton("OK", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
+    private String ageSince(long tsSec) {
+        long days = Math.max(0, (System.currentTimeMillis() / 1000 - tsSec) / 86400);
+        if (days < 30) return days + " дн.";
+        if (days < 365) return (days / 30) + " мес.";
+        return (days / 365) + " г. " + ((days % 365) / 30) + " мес.";
+    }
+
     private void addAccountHider(Context context) {
-        com.bossgram.modules.accounthider.AccountHiderModule m = hider();
+        com.bossgram.modules.accounthider.AccountHiderModule m =
+                findModule(com.bossgram.modules.accounthider.AccountHiderModule.class);
         if (m == null) return;
 
         HeaderCell h = new HeaderCell(context);
