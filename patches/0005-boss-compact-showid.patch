@@ -1,8 +1,16 @@
-BOSSgram compact/showid hooks v2 (DrKLO/Telegram master, Oct 2026).
+BOSSgram compact/showid hooks v3 (DrKLO/Telegram master, Oct 2026).
 Native ports of plugin-need (see docs/PLUGINS.md): compacttext, showid.
 All logic in com.bossgram.modules.*; single lines here only.
 Anchors verified against upstream master 12.10.6 (7112).
 On reject: re-anchor the single added line, keep everything else.
+
+v3 fixes (showid never displayed):
+- ChatAvatarContainer: updateSubtitle() writes newSubtitle DIRECTLY into the
+  views, setSubtitle() is NOT on that path. Hook the finalized newSubtitle
+  instead (setSubtitle hook kept for the direct-call path, e.g. business link).
+- ProfileActivity: updateProfileData has TWO name/status loops (user branch +
+  chat branch); the chat branch sets status text AFTER the user branch, so the
+  hook must live in both loop bodies.
 
 --- a/TMessagesProj/src/main/java/org/telegram/messenger/SendMessagesHelper.java
 +++ b/TMessagesProj/src/main/java/org/telegram/messenger/SendMessagesHelper.java
@@ -28,13 +36,30 @@ On reject: re-anchor the single added line, keep everything else.
 +        } catch (Throwable ignore) {}
          if (lastSubtitle == null) {
 
+--- a/TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAvatarContainer.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/Components/ChatAvatarContainer.java
+@@ -updateSubtitle(), before newSubtitle is applied to the views
+             useOnlineColor = true;
+             setTypingAnimation(true);
+         }
++        // BOSSgram: ShowId — append dialog ID (display only, no dup).
++        // NOTE: updateSubtitle writes directly to the views, setSubtitle() is NOT on this path.
++        try {
++            String bossId = com.bossgram.core.BossHooks.dialogIdLine(parentFragment.getDialogId(), currentAccount);
++            if (bossId != null && !bossId.isEmpty() && newSubtitle != null) {
++                String s = newSubtitle.toString();
++                if (!s.contains(bossId)) newSubtitle = TextUtils.concat(newSubtitle, " · ", bossId);
++            }
++        } catch (Throwable ignore) {}
+         lastSubtitleColorKey = useOnlineColor ? Theme.key_chat_status : Theme.key_actionBarDefaultSubtitle;
+
 --- a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
-@@ -status text applied to onlineTextView
+@@ -updateProfileData user branch: status text applied to onlineTextView
                  } else {
                      onlineTextView[a].setText(newString2);
                  }
-+                // BOSSgram: ShowId — ID under status (display only, no dup).
++                // BOSSgram: ShowId — ID under status, user branch (display only, no dup).
 +                try {
 +                    String bossId = com.bossgram.core.BossHooks.dialogIdLine(getDialogId(), currentAccount);
 +                    if (bossId != null && !bossId.isEmpty() && onlineTextView[a] != null) {
@@ -44,3 +69,27 @@ On reject: re-anchor the single added line, keep everything else.
 +                    }
 +                } catch (Throwable ignore) {}
                  onlineTextView[a].setDrawablePadding(dp(9));
+
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
+@@ -updateProfileData chat branch: end of status loop body
+                 if (a == 1 && isTopic) {
+                     if (profileStatusIsButton) {
+                         onlineTextView[a].setOnClickListener(e -> goToForum());
+                     } else {
+                         onlineTextView[a].setOnClickListener(null);
+                         onlineTextView[a].setClickable(false);
+                     }
+                 }
++                // BOSSgram: ShowId — ID under status, chat branch (display only, no dup).
++                // NOTE: this second loop overwrites status text, so the hook must live here too.
++                try {
++                    String bossId = com.bossgram.core.BossHooks.dialogIdLine(getDialogId(), currentAccount);
++                    if (bossId != null && !bossId.isEmpty() && onlineTextView[a] != null) {
++                        CharSequence cur = onlineTextView[a].getText();
++                        String s = cur == null ? "" : cur.toString();
++                        if (!s.contains(bossId)) onlineTextView[a].setText(s.isEmpty() ? bossId : s + "\n" + bossId);
++                    }
++                } catch (Throwable ignore) {}
+             }
+             if (changed) {
