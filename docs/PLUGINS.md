@@ -1,6 +1,6 @@
 # Плагины BOSSgram: аудит и нативные порты
 
-Исходники Python-плагинов: `I:\ai\projects\BOSSgram\plugins` (вне репо, 9 файлов, 4273 строки).
+Исходники Python-плагинов: `I:\ai\projects\BOSSgram\plugins` (вне репо) + `plugins/plugin-need` (chat_summary, chatexport, compact_text).
 Они писаны под ЧУЖИЕ хост-SDK (kvuco `base_plugin`, ExteraGram `PluginsController`) —
 запустить `.py` напрямую нельзя: нет ни рантайма, ни SDK. Поэтому портируем в натив.
 В репо (`plugins/`) вендорятся ТОЛЬКО прошедшие аудит.
@@ -18,6 +18,9 @@
 | `account_hider` 1.0.1 | БЛОБ `DEX_B64` отклонен → функция переписана: `bossgram/modules/accounthider` |
 | `add_to_folder` 1.0 | БЛОБ `__DEX_BEGIN__` отклонен → функция переписана: `bossgram/modules/addtofolder` |
 | `anti_spoiler` 2.0 | БЛОБ (SHA-пиннед DEX) отклонен → функция переписана: `bossgram/modules/antispoiler` |
+| `chat_summary` 2.0.0 @aaxnet (plugin-need) | ЧИСТ: AI-вызовы только на выбранный юзером endpoint (OpenAI/Anthropic/Gemini/Ollama/custom), ключ в локальных prefs, без DEX/WebView. → `bossgram/modules/chatsummary` |
+| `chatexport` 2.0 @mihailkotovski (plugin-need) | DEX-ЯДРО ОТКЛОНЕНО (`InMemoryDexClassLoader`, `chatexport.dex`, перехват openForView) → функция переписана без DEX: `TL_messages_getHistory` + локальные HTML/JSON/TXT. → `bossgram/modules/chatexport` |
+| `compact_text` 1.0.5 @incLu_01 (plugin-need) | ЧИСТ: локальная упаковка длинных текстов в файл (TXT/DOCX), `.cpt` команда, без DEX/сети. → `bossgram/modules/compacttext` |
 
 ## Нативные порты
 
@@ -31,6 +34,10 @@
 | `accounthider` (патч 0003) | фильтр списков в 3 пикерах | чекбоксы аккаунтов |
 | `addtofolder` (патч 0003) | 1 хук в `updateCounters` | тумблер |
 | `antispoiler` (патч 0003) | 1 хук в конце `setMessageContent`: флаги + очистка `SpoilerEffect` из блоков (флагов одних мало — эффекты пекутся при layout) | тумблер |
+| `chatsummary` (без хуков) | `TL_messages_getHistory` + `HttpURLConnection` к выбранному AI endpoint по кнопке | тумблер (ВКЛ) + «Сделать саммари» + настройки провайдера |
+| `chatexport` (без хуков) | `TL_messages_getHistory` постранично, локальные HTML/JSON/TXT | тумблер (ВКЛ) + «Экспортировать чат» |
+| `compacttext` (патч 0005) | 1 хук в начале `SendMessagesHelper.sendMessage`: длинные → файл TXT/DOCX, `.cpt` форсит | тумблер (ВКЛ) + порог |
+| `showid` (патч 0005) | `ProfileActivity.updateProfileData` + `ChatActivity.updateTitle` (только отображение) + `TL_contacts_resolveUsername` lookup | тумблер (ВКЛ) + «Узнать ID по @username», мой ID всегда виден |
 
 Возраст = нижняя граница по дате старейшего фото профиля (аккаунт не моложе своего фото).
 Показываем: имя, ID, @username, DC, число фото, старейшее фото, оценка.

@@ -1,10 +1,11 @@
-r"""Generate BOSSgram launcher art (dark + orange B).
+r"""Generate BOSSgram launcher art (dark + orange B, full-bleed).
 
 Covers BOTH launcher chains actually used by the app:
 - icon_6_* (activity-alias icons)
 - ic_launcher* / icon_foreground* / icon_background* / icon_plane (the effective
   launcher, see aapt dump badging -> mipmap-anydpi-v26/ic_launcher.xml)
 
+Full-bleed: тёмный фон на всю ширину, B занимает ~78% иконки.
 Output mirrors upstream res layout so it can be copied over:
   bossgram/assets/icons/mipmap-<dpi>/*.png
   bossgram/assets/icons/drawable-<dpi>/ic_launcher_dr.webp
@@ -18,10 +19,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "bossgram" / "assets" / "icons"
 
-BG = (27, 27, 34, 255)      # graphite
+BG = (27, 27, 34, 255)      # graphite, full-bleed dark фон на всю ширину
 FG = (255, 107, 26, 255)    # boss orange
 DENSITIES = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 FG_SCALE = 2.25  # upstream foreground artwork is 2.25x launcher (192 -> 432)
+# Full-bleed: B занимает ~78% иконки (минимальные поля 11%), фон залит целиком.
+LEGACY_CAP_RATIO = 0.78
+FG_CAP_RATIO = 0.44
 
 
 def draw_b(draw, s, ox, oy, color):
@@ -59,26 +63,26 @@ def main():
         d = OUT / f"mipmap-{dpi}"
         d.mkdir(parents=True, exist_ok=True)
 
-        # legacy launcher (rounded square + B)
+        # legacy launcher (rounded square + B, full-bleed: фон на всю ширину)
         icon = rounded_bg(px)
         dr = ImageDraw.Draw(icon)
-        cap = int(px * 0.52)
+        cap = int(px * LEGACY_CAP_RATIO)
         draw_b(dr, cap, (px - int(cap * 0.78)) // 2, (px - cap) // 2, FG)
         icon.save(d / "icon_6_launcher.png")
 
-        # legacy round (circle + B)
+        # legacy round (circle + B, full-bleed)
         circ = Image.new("RGBA", (px, px), (0, 0, 0, 0))
         ImageDraw.Draw(circ).ellipse([0, 0, px, px], fill=BG)
         dr = ImageDraw.Draw(circ)
-        cap = int(px * 0.52)
+        cap = int(px * LEGACY_CAP_RATIO)
         draw_b(dr, cap, (px - int(cap * 0.78)) // 2, (px - cap) // 2, FG)
         circ.save(d / "icon_6_launcher_round.png")
 
-        # adaptive foreground (transparent + B, artwork 2.25x)
+        # adaptive foreground (transparent + B, artwork 2.25x, full-bleed)
         fpx = int(px * FG_SCALE)
         fg = Image.new("RGBA", (fpx, fpx), (0, 0, 0, 0))
         dr = ImageDraw.Draw(fg)
-        cap = int(fpx * 0.30)
+        cap = int(fpx * FG_CAP_RATIO)
         draw_b(dr, cap, (fpx - int(cap * 0.78)) // 2, (fpx - cap) // 2, FG)
         fg.save(d / "icon_6_foreground.png")
         fg.save(d / "icon_6_foreground_sa.png")

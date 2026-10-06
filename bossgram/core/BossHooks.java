@@ -273,6 +273,62 @@ public final class BossHooks {
         } catch (Throwable t) { t.printStackTrace(); }
     }
 
+    /** CompactText: start of SendMessagesHelper.sendMessage. True = consumed (packed to file). */
+    public static boolean interceptSendMessage(int account, long peer, String message) {
+        if (!inited) return false;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.compacttext.CompactTextModule) {
+                    return ((com.bossgram.modules.compacttext.CompactTextModule) m)
+                            .interceptSend(account, peer, message);
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return false;
+    }
+
+    /** ShowId: "ID: ..." line for a profile user, "" when disabled. */
+    public static String userIdLine(Object user) {
+        if (!inited) return "";
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.showid.ShowIdModule) {
+                    return ((com.bossgram.modules.showid.ShowIdModule) m)
+                            .userIdText((org.telegram.tgnet.TLRPC.User) user);
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return "";
+    }
+
+    /** ShowId: "ID группы/канала: ..." line for a profile chat, "" when disabled. */
+    public static String chatIdLine(Object chat) {
+        if (!inited) return "";
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.showid.ShowIdModule) {
+                    return ((com.bossgram.modules.showid.ShowIdModule) m)
+                            .chatIdText((org.telegram.tgnet.TLRPC.Chat) chat);
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return "";
+    }
+
+    /** ShowId: dialog id line for any peer, "" when disabled. */
+    public static String dialogIdLine(long dialogId, int account) {
+        if (!inited) return "";
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.showid.ShowIdModule) {
+                    return ((com.bossgram.modules.showid.ShowIdModule) m)
+                            .dialogIdText(dialogId, account);
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+        return "";
+    }
+
 
     // ---- internals ----
 

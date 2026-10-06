@@ -157,6 +157,9 @@ public class BossSettingsActivity extends BaseFragment {
         container.addView(palette, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         addPluginPorts(context);
+        addAccountHider(context);
+        addFolderSpoiler(context);
+        addBossPorts(context);
     }
 
     private void addToggle(Context context, String title, boolean checked, java.util.function.Consumer<Boolean> onFlip) {
@@ -334,6 +337,272 @@ public class BossSettingsActivity extends BaseFragment {
         }
     }
 
+    private void addBossPorts(Context context) {
+        HeaderCell h = new HeaderCell(context);
+        h.setText("Саммари, экспорт, длинные тексты");
+        container.addView(h, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        com.bossgram.modules.chatsummary.ChatSummaryModule sum =
+                findModule(com.bossgram.modules.chatsummary.ChatSummaryModule.class);
+        if (sum != null) {
+            addToggle(context, "AI-саммари чата", sum.isEnabled(), sum::setEnabled);
+            TextSettingsCell row = new TextSettingsCell(context);
+            row.setTextAndValue("Сделать саммари", "50 / 100 / 200 сообщений", true);
+            row.setOnClickListener(v -> askSummary(context, sum));
+            container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            String k = sum.getKey();
+            String masked = k == null || k.isEmpty() ? "не задан" : "задан (" + k.length() + " симв.)";
+            // NOTE: separate row below to avoid overwriting the action above.
+            TextSettingsCell prov = new TextSettingsCell(context);
+            prov.setTextAndValue("Настройки AI: " + providerName(sum.getProvider()), masked, true);
+            prov.setOnClickListener(v -> askSummarySettings(context, sum));
+            container.addView(prov, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
+        com.bossgram.modules.chatexport.ChatExportModule exp =
+                findModule(com.bossgram.modules.chatexport.ChatExportModule.class);
+        if (exp != null) {
+            addToggle(context, "Экспорт чата (HTML/JSON/TXT)", exp.isEnabled(), exp::setEnabled);
+            TextSettingsCell row = new TextSettingsCell(context);
+            row.setTextAndValue("Экспортировать чат", formatName(exp.getFormat()), true);
+            row.setOnClickListener(v -> askExport(context, exp));
+            container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
+        com.bossgram.modules.compacttext.CompactTextModule ct =
+                findModule(com.bossgram.modules.compacttext.CompactTextModule.class);
+        if (ct != null) {
+            addToggle(context, "Длинные тексты в файл", ct.isEnabled(), ct::setEnabled);
+            TextSettingsCell row = new TextSettingsCell(context);
+            row.setTextAndValue("Порог символов", String.valueOf(ct.getThreshold()), true);
+            row.setOnClickListener(v -> askInt(context, "Порог символов", ct.getThreshold(), 100, 500000,
+                    val -> { ct.setThreshold(val); rebuild(context); }));
+            container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
+        HeaderCell hid = new HeaderCell(context);
+        hid.setText("ID пользователей и групп");
+        container.addView(hid, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        com.bossgram.modules.showid.ShowIdModule sid =
+                findModule(com.bossgram.modules.showid.ShowIdModule.class);
+        if (sid != null) {
+            addToggle(context, "Показывать ID", sid.isEnabled(), sid::setEnabled);
+            try {
+                int acc = getCurrentAccount();
+                org.telegram.messenger.UserConfig uc = org.telegram.messenger.UserConfig.getInstance(acc);
+                if (uc != null && uc.getCurrentUser() != null) {
+                    long myId = uc.getCurrentUser().id;
+                    TextSettingsCell me = new TextSettingsCell(context);
+                    me.setTextAndValue("Мой ID", String.valueOf(myId), false);
+                    container.addView(me, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+                }
+            } catch (Throwable ignore) {}
+            TextSettingsCell lookup = new TextSettingsCell(context);
+            lookup.setTextAndValue("Узнать ID по @username", "юзер, группа, канал", false);
+            lookup.setOnClickListener(v -> askShowId(context, sid));
+            container.addView(lookup, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+    }
+
+    private String providerName(int p) {
+        if (p == 1) return "Anthropic";
+        if (p == 2) return "Gemini";
+        if (p == 3) return "Ollama";
+        if (p == 4) return "Custom";
+        return "OpenAI";
+    }
+
+    private String formatName(int f) {
+        if (f == 1) return "JSON";
+        if (f == 2) return "TXT";
+        return "HTML";
+    }
+
+    private void askSummary(Context context, com.bossgram.modules.chatsummary.ChatSummaryModule sum) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Саммари чата");
+        builder.setMessage("Введи ID диалога (узнать можно в разделе «ID» ниже) и число сообщений.");
+        LinearLayout ll = new LinearLayout(context);
+        ll.setOrientation(LinearLayout.VERTICAL);
+        int pad = AndroidUtilities.dp(16);
+        ll.setPadding(pad, pad, pad, pad);
+        EditText idInput = new EditText(context);
+        idInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        idInput.setHint("ID диалога");
+        EditText countInput = new EditText(context);
+        countInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        countInput.setText("100");
+        countInput.setHint("Сообщений: 50-500");
+        ll.addView(idInput);
+        ll.addView(countInput);
+        builder.setView(ll);
+        builder.setPositiveButton("Сделать", (d, w) -> {
+            try {
+                long dialogId = Long.parseLong(idInput.getText().toString().trim());
+                int count = Integer.parseInt(countInput.getText().toString().trim());
+                android.widget.Toast.makeText(context, "Анализирую…", android.widget.Toast.LENGTH_SHORT).show();
+                sum.summarize(dialogId, count, new com.bossgram.modules.chatsummary.ChatSummaryModule.Listener() {
+                    @Override public void onResult(String summary, int used) {
+                        AlertDialog.Builder b2 = new AlertDialog.Builder(context);
+                        b2.setTitle("Саммари · " + used + " сообщений");
+                        b2.setMessage(summary);
+                        b2.setPositiveButton("OK", (dd, ww) -> {});
+                        b2.setNegativeButton("Копировать", (dd, ww) -> {
+                            try {
+                                android.content.ClipboardManager cm =
+                                        (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("summary", summary));
+                                android.widget.Toast.makeText(context, "Скопировано", android.widget.Toast.LENGTH_SHORT).show();
+                            } catch (Throwable ignore) {}
+                        });
+                        showDialog(b2.create());
+                    }
+                    @Override public void onError(String message) {
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (NumberFormatException ignore) {
+                android.widget.Toast.makeText(context, "Проверь ID и число", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton("Отмена", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
+    private void askSummarySettings(Context context, com.bossgram.modules.chatsummary.ChatSummaryModule sum) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Настройки AI");
+        builder.setMessage("Провайдер: 0 OpenAI, 1 Anthropic, 2 Gemini, 3 Ollama, 4 Custom. Ключ хранится только на устройстве.");
+        LinearLayout ll = new LinearLayout(context);
+        ll.setOrientation(LinearLayout.VERTICAL);
+        int pad = AndroidUtilities.dp(16);
+        ll.setPadding(pad, pad, pad, pad);
+        EditText prov = new EditText(context);
+        prov.setInputType(InputType.TYPE_CLASS_NUMBER);
+        prov.setText(String.valueOf(sum.getProvider()));
+        prov.setHint("Провайдер 0-4");
+        EditText key = new EditText(context);
+        key.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        key.setText(sum.getKey());
+        key.setHint("Ключ");
+        EditText model = new EditText(context);
+        model.setInputType(InputType.TYPE_CLASS_TEXT);
+        model.setText(sum.getModel());
+        model.setHint("Модель (пусто = по умолчанию)");
+        ll.addView(prov);
+        ll.addView(key);
+        ll.addView(model);
+        builder.setView(ll);
+        builder.setPositiveButton("OK", (d, w) -> {
+            try {
+                sum.setProvider(Math.max(0, Math.min(4, Integer.parseInt(prov.getText().toString().trim()))));
+            } catch (NumberFormatException ignore) {}
+            sum.setKey(key.getText().toString().trim());
+            sum.setModel(model.getText().toString().trim());
+            rebuild(context);
+        });
+        builder.setNegativeButton("Отмена", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
+    private void askExport(Context context, com.bossgram.modules.chatexport.ChatExportModule exp) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Экспорт чата");
+        builder.setMessage("Введи ID диалога. Формат: 0 HTML, 1 JSON, 2 TXT. Файл сохранится в кэше и предложится отправка.");
+        LinearLayout ll = new LinearLayout(context);
+        ll.setOrientation(LinearLayout.VERTICAL);
+        int pad = AndroidUtilities.dp(16);
+        ll.setPadding(pad, pad, pad, pad);
+        EditText idInput = new EditText(context);
+        idInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
+        idInput.setHint("ID диалога");
+        EditText fmtInput = new EditText(context);
+        fmtInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        fmtInput.setText(String.valueOf(exp.getFormat()));
+        fmtInput.setHint("Формат 0-2");
+        ll.addView(idInput);
+        ll.addView(fmtInput);
+        builder.setView(ll);
+        builder.setPositiveButton("Экспорт", (d, w) -> {
+            try {
+                long dialogId = Long.parseLong(idInput.getText().toString().trim());
+                try {
+                    exp.setFormat(Math.max(0, Math.min(2, Integer.parseInt(fmtInput.getText().toString().trim()))));
+                } catch (NumberFormatException ignore) {}
+                android.widget.Toast.makeText(context, "Экспортирую…", android.widget.Toast.LENGTH_SHORT).show();
+                exp.exportChat(dialogId, new com.bossgram.modules.chatexport.ChatExportModule.Listener() {
+                    @Override public void onDone(java.io.File file, int count) {
+                        AlertDialog.Builder b2 = new AlertDialog.Builder(context);
+                        b2.setTitle("Экспорт завершён");
+                        b2.setMessage(count + " сообщений:\n" + file.getAbsolutePath());
+                        b2.setPositiveButton("OK", (dd, ww) -> {});
+                        b2.setNegativeButton("Отправить", (dd, ww) -> {
+                            try {
+                                android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+                                intent.setType("*/*");
+                                intent.putExtra(android.content.Intent.EXTRA_STREAM,
+                                        androidx.core.content.FileProvider.getUriForFile(context,
+                                                context.getPackageName() + ".provider", file));
+                                intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                context.startActivity(android.content.Intent.createChooser(intent, "Отправить файл"));
+                            } catch (Throwable t) {
+                                android.widget.Toast.makeText(context, file.getAbsolutePath(),
+                                        android.widget.Toast.LENGTH_LONG).show();
+                            }
+                        });
+                        showDialog(b2.create());
+                        rebuild(context);
+                    }
+                    @Override public void onError(String message) {
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } catch (NumberFormatException ignore) {
+                android.widget.Toast.makeText(context, "Проверь ID", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton("Отмена", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
+    private void askShowId(Context context, com.bossgram.modules.showid.ShowIdModule sid) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("ID по @username");
+        builder.setMessage("Введи @username юзера, группы или канала.");
+        EditText input = new EditText(context);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        int pad = AndroidUtilities.dp(16);
+        input.setPadding(pad, pad, pad, pad);
+        builder.setView(input);
+        builder.setPositiveButton("Узнать", (d, w) -> {
+            String q = input.getText().toString().trim();
+            if (q.isEmpty()) return;
+            android.widget.Toast.makeText(context, "Запрашиваю…", android.widget.Toast.LENGTH_SHORT).show();
+            sid.lookup(q, new com.bossgram.modules.showid.ShowIdModule.Listener() {
+                @Override public void onResult(String title, String lines) {
+                    AlertDialog.Builder b2 = new AlertDialog.Builder(context);
+                    b2.setTitle(title);
+                    b2.setMessage(lines);
+                    b2.setPositiveButton("OK", (dd, ww) -> {});
+                    b2.setNegativeButton("Копировать", (dd, ww) -> {
+                        try {
+                            android.content.ClipboardManager cm =
+                                    (android.content.ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText("id", lines));
+                        } catch (Throwable ignore) {}
+                    });
+                    showDialog(b2.create());
+                }
+                @Override public void onError(String message) {
+                    android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+        builder.setNegativeButton("Отмена", (d, w) -> {});
+        showDialog(builder.create());
+    }
+
     // ---- dialogs ----
 
     private void askIds(Context context, ChatFilter f) {
@@ -344,7 +613,7 @@ public class BossSettingsActivity extends BaseFragment {
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("ID чатов через запятую");
-        builder.setMessage("Узнать ID: перешли сообщение себе, ID виден в debug-меню. Пусто = очистить список.");
+        builder.setMessage("Узнать ID: раздел «ID пользователей и групп» ниже (по @username) или ID текущего диалога. Пусто = очистить список.");
         EditText input = new EditText(context);
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         input.setText(sb.toString());
