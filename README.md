@@ -38,12 +38,17 @@ BOSSgram/
         ThemesModule.java
   patches/
     0001-boss-hooks.patch    # 5 однострочных вставок в upstream, больше ничего
+    0002-boss-branding.patch # имя BOSSgram, пакет com.bossgram.messenger, своя иконка, пункт BossGram в настройках
+  bossgram/assets/icons/     # сгенерированные иконки (tools/make-icons.py), кладутся поверх icon_6_*
   tools/
     sync-upstream.ps1/.sh    # обновление на новую версию Telegram
     check-touch-points.py    # контроль: свой код не расползся по upstream
+    security-check.py        # гейт: секреты/бэкдоры/уязвимости, ноль BLOCKER
+    make-icons.py            # генерация иконок BOSSgram
   docs/
     ARCHITECTURE.md
-    UPDATE.md
+    UPDATE.md                # + проверенная цепочка сборки Windows
+    SECURITY.md
 ```
 
 ## Быстрый старт
@@ -65,6 +70,16 @@ git -C ../Telegram-upstream apply ../BOSSgram/patches/0001-boss-hooks.patch
 # 4. собрать как обычный Telegram (api_id, google-services.json, BuildVars.java)
 ```
 
+## Брендинг и отпечаток (проверено в APK)
+
+- имя: BOSSgram / BOSSgram Beta (`AppName`), иконка: темная + оранжевая B (`make-icons.py`)
+- пакет: `com.bossgram.messenger[.beta|.web]` — ставится рядом с официальным Telegram
+- пункт BossGram прямо в Настройках (id 100, открывает `BossSettingsActivity`)
+- `google-services.json` значения dummy — для рабочего пуша подставь свой Firebase проект
+- релизная подпись: свой keystore (сейчас dummy из upstream, `gradle.properties` без секретов в гите)
+
+Проверено `aapt dump badging`: package + label + иконка + `com/bossgram` в dex.
+
 ## Проверка перед каждым коммитом (обязательно)
 
 ```powershell
@@ -80,7 +95,7 @@ git diff             # прочитать весь diff глазами
 
 ## Правила чтобы обновление не болело
 
-1. Не редактируй `org.telegram.*` кроме 3 хуков из патча.
+1. Не редактируй `org.telegram.*` кроме патчей `patches/` (5 хуков + брендинг + пункт BossGram).
 2. Новый функционал = новый класс в `bossgram/modules/<name>/`.
 3. Общайся с Telegram только через `BossHooks` + `BossContext`.
 4. Никаких копипаст больших кусков upstream в свой код — сломается на следующем релизе.

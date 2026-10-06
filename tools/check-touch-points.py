@@ -9,14 +9,19 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ALLOW_RE = re.compile(r"BossHooks\.(init|onMessagesDeleted|onChatOpened|applyCustomTheme)")
+ALLOW_RE = re.compile(
+    r"BossHooks\.(init|onOwnMessagesDeleted|onRemoteMessagesDeleted|onChatOpened|onNewIntent)"
+    r"|// BOSSgram"  # branding/settings one-liners are commented as such
+    r"|SettingCell\.Factory\.of\(100"
+    r"|new com\.bossgram\.modules\.antidelete\.BossSettingsActivity\(\)"
+)
 
 # everybody forgets: this repo is skeleton, Telegram sources live next door.
 # If TMessagesProj exists here (full fork), scan it. Else scan bossgram/ presence only.
 TM = ROOT / "TMessagesProj"
 if not TM.exists():
     print("OK (skeleton): no TMessagesProj here, nothing to leak yet.")
-    print("Rule: свой код только в bossgram/, в org.telegram.* только 5 строк BossHooks.")
+    print("Rule: свой код только в bossgram/, в org.telegram.* только патчи patches/ (хуки + брендинг + пункт BossGram).")
     sys.exit(0)
 
 bad = []
