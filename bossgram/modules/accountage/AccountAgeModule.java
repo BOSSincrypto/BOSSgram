@@ -27,9 +27,12 @@ public class AccountAgeModule implements BossModule {
     }
 
     public static class Report {
+        public boolean isChat;   // true = группа/канал, false = пользователь
         public long userId;
+        public long chatId;
         public String name = "";
         public String username = "";
+        public String extra = ""; // тип чата: группа/супергруппа/канал
         public int dcId;
         public long earliestPhotoDate; // seconds, 0 = unknown
         public int photosTotal;        // -1 = unknown
@@ -75,11 +78,16 @@ public class AccountAgeModule implements BossModule {
                     MessagesController.getInstance(account).putUsers(resolved.users, false);
                 } catch (Throwable ignore) {}
                 TLRPC.User user = peerUser(resolved.peer, resolved.users);
-                if (user == null) {
-                    postError(listener, "Это не пользователь");
+                if (user != null) {
+                    fetchPhotos(account, user, listener);
                     return;
                 }
-                fetchPhotos(account, user, listener);
+                TLRPC.Chat chat = peerChat(resolved.peer, resolved.chats);
+                if (chat != null) {
+                    finishChat(chat, listener);
+                    return;
+                }
+                postError(listener, "Ни юзер, ни чат не найдены");
             });
         } catch (Throwable t) {
             t.printStackTrace();
@@ -184,6 +192,43 @@ public class AccountAgeModule implements BossModule {
             t.printStackTrace();
             postError(listener, "Ошибка обработки");
         }
+    }
+
+    private void finishChat(TLRPC.Chat chat, Listener listener) {
+        try {
+            Report r = new Report();
+            r.isChat = true;
+            r.chatId = chat.id;
+            try { r.name = chat.title; } catch (Throwable ignore) {}
+            try { r.username = org.telegram.messenger.ChatObject.getPublicUsername(chat); } catch (Throwable ignore) {}
+            try {
+                if (chat instanceof TLRPC.TL_channel) {
+                    r.extra = ((TLRPC.TL_channel) chat).megagroup ? "супергруппа" : "канал";
+                } else {
+                    r.extra = "группа";
+                }
+            } catch (Throwable ignore) {}
+            final Report out = r;
+            AndroidUtilities.runOnUIThread(() -> {
+                try { listener.onResult(out); } catch (Throwable t) { t.printStackTrace(); }
+            });
+        } catch (Throwable t) {
+            t.printStackTrace();
+            postError(listener, "Ошибка обработки");
+        }
+    }
+
+    private TLRPC.Chat peerChat(TLRPC.Peer peer, ArrayList<TLRPC.Chat> chats) {
+        try {
+            long id = 0;
+            if (peer instanceof TLRPC.TL_peerChannel) id = ((TLRPC.TL_peerChannel) peer).channel_id;
+            else if (peer instanceof TLRPC.TL_peerChat) id = ((TLRPC.TL_peerChat) peer).chat_id;
+            if (id == 0 || chats == null) return null;
+            for (TLRPC.Chat c : chats) {
+                if (c != null && c.id == id) return c;
+            }
+        } catch (Throwable ignore) {}
+        return null;
     }
 
     private void postError(Listener listener, String message) {

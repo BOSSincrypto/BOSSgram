@@ -260,13 +260,13 @@ public final class BossHooks {
         } catch (Throwable t) { t.printStackTrace(); }
     }
 
-    /** AntiSpoiler: start of ChatMessageCell.setMessageObject. */
-    public static void onMessageBound(Object messageObject) {
+    /** AntiSpoiler: end of ChatMessageCell.setMessageContent (layouts exist, clear effects). */
+    public static void onMessageShown(Object cell) {
         if (!inited) return;
         try {
             for (BossModule m : ModuleRegistry.all()) {
                 if (m instanceof com.bossgram.modules.antispoiler.AntiSpoilerModule) {
-                    ((com.bossgram.modules.antispoiler.AntiSpoilerModule) m).onMessageBound(messageObject);
+                    ((com.bossgram.modules.antispoiler.AntiSpoilerModule) m).onMessageShown(cell);
                     return;
                 }
             }

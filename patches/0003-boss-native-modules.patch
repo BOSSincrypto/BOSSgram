@@ -50,11 +50,11 @@ All logic in com.bossgram.modules.*; single lines here only.
 
 --- a/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java
 +++ b/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java
-@@ -13340,5 +13340,7 @@
-                                  boolean topNear,
-                                  boolean firstInChat,
-                                  boolean lastInChatList) {
-+        // BOSSgram: AntiSpoiler — reveal text/media spoilers automatically.
-+        com.bossgram.core.BossHooks.onMessageBound(messageObject);
-         if (attachedToWindow && !frozen) {
+@@ -11317,4 +11317,6 @@
+         highlightCaptionToSetStart = highlightCaptionToSetEnd = -1;
+ 
+         updateFlagSecure();
++        // BOSSgram: AntiSpoiler — reveal text/media spoilers automatically (layouts exist here).
++        com.bossgram.core.BossHooks.onMessageShown(this);
+     }
              setMessageContent(messageObject, groupedMessages, bottomNear, topNear, firstInChat, lastInChatList);
