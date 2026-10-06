@@ -202,7 +202,7 @@ public class BossSettingsActivity extends BaseFragment {
         if (age != null) {
             addToggle(context, "Проверка возраста аккаунта", age.isEnabled(), age::setEnabled);
             TextSettingsCell check = new TextSettingsCell(context);
-            check.setTextAndValue("Проверить @username", "фото, DC, оценка", false);
+            check.setTextAndValue("Проверить @username", "ID, фото, DC, оценка", false);
             check.setOnClickListener(v -> askAgeUsername(context, age));
             container.addView(check, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
@@ -211,7 +211,7 @@ public class BossSettingsActivity extends BaseFragment {
     private void askAgeUsername(Context context, com.bossgram.modules.accountage.AccountAgeModule age) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Возраст аккаунта");
-        builder.setMessage("Введи @username. Оценка — по дате самого старого фото профиля (нижняя граница).");
+        builder.setMessage("Введи @username юзера, группы или канала. Для юзеров — оценка возраста по старейшему фото.");
         EditText input = new EditText(context);
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         int pad = AndroidUtilities.dp(16);
@@ -236,19 +236,27 @@ public class BossSettingsActivity extends BaseFragment {
 
     private void showAgeReport(Context context, com.bossgram.modules.accountage.AccountAgeModule.Report r) {
         StringBuilder sb = new StringBuilder();
-        sb.append(r.name).append("\nID: ").append(r.userId);
-        if (r.username != null && !r.username.isEmpty()) sb.append("\n@").append(r.username);
-        if (r.dcId != 0) sb.append("\nDC: ").append(r.dcId);
-        if (r.photosTotal >= 0) sb.append("\nФото: ").append(r.photosTotal);
-        if (r.earliestPhotoDate > 0) {
-            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("MM.yyyy", java.util.Locale.US);
-            sb.append("\nСтарейшее фото: ").append(f.format(new java.util.Date(r.earliestPhotoDate * 1000)));
-            sb.append("\nАккаунту не меньше: ").append(ageSince(r.earliestPhotoDate));
+        sb.append(r.name);
+        if (r.isChat) {
+            sb.append("\nID группы: ").append(r.chatId);
+            if (r.extra != null && !r.extra.isEmpty()) sb.append(" (").append(r.extra).append(")");
         } else {
-            sb.append("\nВозраст: неизвестен (нет фото)");
+            sb.append("\nID пользователя: ").append(r.userId);
+        }
+        if (r.username != null && !r.username.isEmpty()) sb.append("\n@").append(r.username);
+        if (!r.isChat) {
+            if (r.dcId != 0) sb.append("\nDC: ").append(r.dcId);
+            if (r.photosTotal >= 0) sb.append("\nФото: ").append(r.photosTotal);
+            if (r.earliestPhotoDate > 0) {
+                java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("MM.yyyy", java.util.Locale.US);
+                sb.append("\nСтарейшее фото: ").append(f.format(new java.util.Date(r.earliestPhotoDate * 1000)));
+                sb.append("\nАккаунту не меньше: ").append(ageSince(r.earliestPhotoDate));
+            } else {
+                sb.append("\nВозраст: неизвестен (нет фото)");
+            }
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Возраст аккаунта");
+        builder.setTitle(r.isChat ? "Группа/канал" : "Возраст аккаунта");
         builder.setMessage(sb.toString());
         builder.setPositiveButton("OK", (d, w) -> {});
         showDialog(builder.create());

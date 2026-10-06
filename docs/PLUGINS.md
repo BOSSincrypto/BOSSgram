@@ -30,7 +30,7 @@
 | `accountage` (патч 0004) | без хуков: `TL_contacts_resolveUsername` + `TL_photos_getUserPhotos` по кнопке | тумблер + «Проверить @username» |
 | `accounthider` (патч 0003) | фильтр списков в 3 пикерах | чекбоксы аккаунтов |
 | `addtofolder` (патч 0003) | 1 хук в `updateCounters` | тумблер |
-| `antispoiler` (патч 0003) | 1 хук в `setMessageObject` (флаги `MessageObject`) | тумблер |
+| `antispoiler` (патч 0003) | 1 хук в конце `setMessageContent`: флаги + очистка `SpoilerEffect` из блоков (флагов одних мало — эффекты пекутся при layout) | тумблер |
 
 Возраст = нижняя граница по дате старейшего фото профиля (аккаунт не моложе своего фото).
 Показываем: имя, ID, @username, DC, число фото, старейшее фото, оценка.
