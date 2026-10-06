@@ -17,6 +17,9 @@ public final class ModuleRegistry {
         MODULES.add(new com.bossgram.modules.forumtabs.ForumTabsModule());
         MODULES.add(new com.bossgram.modules.globalsearch.GlobalSearchModule());
         MODULES.add(new com.bossgram.modules.accountage.AccountAgeModule());
+        MODULES.add(new com.bossgram.modules.accounthider.AccountHiderModule());
+        MODULES.add(new com.bossgram.modules.addtofolder.AddToFolderModule());
+        MODULES.add(new com.bossgram.modules.antispoiler.AntiSpoilerModule());
     }
 
     private ModuleRegistry() {}

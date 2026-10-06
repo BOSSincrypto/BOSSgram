@@ -137,8 +137,18 @@ public class BossSettingsActivity extends BaseFragment {
         container.addView(clearAll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         HeaderCell h2 = new HeaderCell(context);
-        h2.setText("Темы");
+        h2.setText("Плагины (аудит пройден, рантайм позже)");
         container.addView(h2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        for (PluginCatalog.Entry e : PluginCatalog.all()) {
+            TextSettingsCell row = new TextSettingsCell(context);
+            row.setTextAndValue(e.name + " " + e.version, e.status, true);
+            container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
+        HeaderCell h3 = new HeaderCell(context);
+        h3.setText("Темы");
+        container.addView(h3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         TextSettingsCell palette = new TextSettingsCell(context);
         palette.setTextAndValue("Палитра", "по умолчанию", false);
@@ -249,6 +259,71 @@ public class BossSettingsActivity extends BaseFragment {
         if (days < 30) return days + " дн.";
         if (days < 365) return (days / 30) + " мес.";
         return (days / 365) + " г. " + ((days % 365) / 30) + " мес.";
+    }
+
+    private void addAccountHider(Context context) {
+        com.bossgram.modules.accounthider.AccountHiderModule m =
+                findModule(com.bossgram.modules.accounthider.AccountHiderModule.class);
+        if (m == null) return;
+
+        HeaderCell h = new HeaderCell(context);
+        h.setText("Скрытые аккаунты");
+        container.addView(h, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        TextCheckCell enable = new TextCheckCell(context);
+        enable.setTextAndCheck("Скрывать выбранные", m.isEnabled(), true);
+        enable.setOnClickListener(v -> {
+            m.setEnabled(!m.isEnabled());
+            enable.setChecked(m.isEnabled());
+        });
+        container.addView(enable, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        java.util.Set<Integer> hidden = m.getHidden();
+        for (int a = 0; a < org.telegram.messenger.UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            if (!org.telegram.messenger.UserConfig.getInstance(a).isClientActivated()) continue;
+            org.telegram.tgnet.TLRPC.User u = org.telegram.messenger.UserConfig.getInstance(a).getCurrentUser();
+            String name = u != null ? org.telegram.messenger.UserObject.getUserName(u) : ("Аккаунт " + (a + 1));
+            if (a == getCurrentAccount()) name += " (текущий)";
+            final int acc = a;
+            TextCheckCell row = new TextCheckCell(context);
+            row.setTextAndCheck(name, hidden.contains(a), true);
+            row.setOnClickListener(v -> {
+                m.setHidden(acc, !m.getHidden().contains(acc));
+                row.setChecked(m.getHidden().contains(acc));
+            });
+            container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+    }
+
+    private void addFolderSpoiler(Context context) {
+        HeaderCell h = new HeaderCell(context);
+        h.setText("Папки и спойлеры");
+        container.addView(h, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        for (BossModule m : BossHooks.modules()) {
+            if (m instanceof com.bossgram.modules.addtofolder.AddToFolderModule) {
+                com.bossgram.modules.addtofolder.AddToFolderModule mod =
+                        (com.bossgram.modules.addtofolder.AddToFolderModule) m;
+                TextCheckCell row = new TextCheckCell(context);
+                row.setTextAndCheck("«В папку» внутри папок", mod.isEnabled(), true);
+                row.setOnClickListener(v -> {
+                    mod.setEnabled(!mod.isEnabled());
+                    row.setChecked(mod.isEnabled());
+                });
+                container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            }
+            if (m instanceof com.bossgram.modules.antispoiler.AntiSpoilerModule) {
+                com.bossgram.modules.antispoiler.AntiSpoilerModule mod =
+                        (com.bossgram.modules.antispoiler.AntiSpoilerModule) m;
+                TextCheckCell r2 = new TextCheckCell(context);
+                r2.setTextAndCheck("Раскрывать спойлеры", mod.isEnabled(), false);
+                r2.setOnClickListener(v -> {
+                    mod.setEnabled(!mod.isEnabled());
+                    r2.setChecked(mod.isEnabled());
+                });
+                container.addView(r2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            }
+        }
     }
 
     // ---- dialogs ----

@@ -232,6 +232,48 @@ public final class BossHooks {
         } catch (Throwable t) { t.printStackTrace(); }
     }
 
+    /** AccountHider: drop hidden accounts from picker lists. Mutates in place. */
+    public static void filterHiddenAccounts(ArrayList<Integer> accounts) {
+        if (!inited || accounts == null) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.accounthider.AccountHiderModule) {
+                    ((com.bossgram.modules.accounthider.AccountHiderModule) m).filterAccounts(accounts);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+    /** AddToFolder: end of DialogsActivity.updateCounters (fields passed, no reflection). */
+    public static void onDialogsCountersUpdated(Object dialogsActivity, Object addToFolderItem,
+                                                Object filterTabsView, int folderId) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.addtofolder.AddToFolderModule) {
+                    ((com.bossgram.modules.addtofolder.AddToFolderModule) m)
+                            .onCountersUpdated(dialogsActivity, addToFolderItem, filterTabsView, folderId);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+    /** AntiSpoiler: start of ChatMessageCell.setMessageObject. */
+    public static void onMessageBound(Object messageObject) {
+        if (!inited) return;
+        try {
+            for (BossModule m : ModuleRegistry.all()) {
+                if (m instanceof com.bossgram.modules.antispoiler.AntiSpoilerModule) {
+                    ((com.bossgram.modules.antispoiler.AntiSpoilerModule) m).onMessageBound(messageObject);
+                    return;
+                }
+            }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
+
     // ---- internals ----
 
     private static void routeToAntiDelete(int account, long dialogId, List<Integer> ids, List<String> texts) {
