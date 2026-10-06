@@ -3,6 +3,7 @@ package com.bossgram.modules.compacttext;
 import com.bossgram.api.BossContext;
 import com.bossgram.api.BossModule;
 
+import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.UserConfig;
@@ -145,9 +146,12 @@ public class CompactTextModule implements BossModule {
             final String finalMime = mime;
             AndroidUtilities.runOnUIThread(() -> {
                 try {
+                    // Upstream 12.10.6: (AccountInstance, path, originalPath, uri, caption,
+                    // mime, dialogId, replyTo, replyToTop, story, quote, edit, notify,
+                    // schedule, inputContent, chatArgs, invert).
                     SendMessagesHelper.prepareSendingDocument(
-                            account, path, path, null, null, finalMime,
-                            peer, null, null, null, null, null, true, 0, null, null, 0, false);
+                            AccountInstance.getInstance(account), path, path, null, null, finalMime,
+                            peer, null, null, null, null, null, true, 0, null, null, false);
                 } catch (Throwable t) { t.printStackTrace(); }
             });
         } catch (Throwable t) {
