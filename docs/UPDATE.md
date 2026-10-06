@@ -45,10 +45,31 @@ git rebase --continue
 python tools/check-touch-points.py
 python tools/security-check.py
 # OK: upstream touched only by hooks, blockers 0
-.\gradlew :TMessagesProj:assembleAfatDebug # в папке сборки Telegram
 ```
 
-Smoke: открыть чат, удалить сообщение, проверить сохранение + очистку. Полный регламент: `docs/SECURITY.md`.
+## Сборка (проверено на Windows, Oct 2026)
+
+Нужно: Java 17, SDK с `platforms;android-36` + `build-tools;36.0.0`, `ndk;27.2.12479018`,
+`cmake;3.22.1` (докинь через sdkmanager), Gradle 8.13 (в репо только unix `gradlew`,
+под Windows качай `gradle-8.13-bin.zip`). В корне сборки создать `local.properties`
+(gitignored, в коммит не идет):
+
+```
+sdk.dir=C\:\\Users\\boss\\AppData\\Local\\Android\\Sdk
+```
+
+```powershell
+# 1. быстрая проверка Java (без native): должны скомпилиться com.bossgram.* + хуки
+gradle :TMessagesProj:compileDebugJavaWithJavac
+# 2. AAR библиотеки (~25 мин первый раз, native)
+gradle :TMessagesProj:assembleDebug
+# 3. APK (~3 мин): TMessagesProj_App/build/outputs/apk/afat/debug/app.apk
+gradle :TMessagesProj_App:assembleDebug
+```
+
+Проверка что наш код в APK: классы `com/bossgram/...` в `classes*.dex`
+(`tools/` скрипт проверки — следующий шаг). Smoke: открыть чат, удалить сообщение,
+проверить сохранение + очистку. Полный регламент: `docs/SECURITY.md`.
 
 ## Правила BuildVars / ключи (важно, иначе не соберется)
 
