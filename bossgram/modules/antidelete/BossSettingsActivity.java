@@ -136,16 +136,6 @@ public class BossSettingsActivity extends BaseFragment {
         }));
         container.addView(clearAll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        HeaderCell h2 = new HeaderCell(context);
-        h2.setText("Плагины (аудит пройден, рантайм позже)");
-        container.addView(h2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-        for (PluginCatalog.Entry e : PluginCatalog.all()) {
-            TextSettingsCell row = new TextSettingsCell(context);
-            row.setTextAndValue(e.name + " " + e.version, e.status, true);
-            container.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        }
-
         HeaderCell h3 = new HeaderCell(context);
         h3.setText("Темы");
         container.addView(h3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
