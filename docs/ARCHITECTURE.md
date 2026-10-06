@@ -9,8 +9,7 @@
 
 ## Слой касания (только это правится в upstream)
 
-Всего 5 однострочников (`patches/0001-boss-hooks.patch`, проверен `git apply --check` на master Oct 2026).
-Все остальное — свой код.
+Хуки: 5 однострочников (`patches/0001-boss-hooks.patch`, проверен `git apply --check` на master Oct 2026).
 
 1. `org.telegram.messenger.ApplicationLoader#onCreate` после `super.onCreate()`
    ```java
@@ -38,6 +37,12 @@
 
 Снапшот текста: только из памяти (`dialogMessagesByIds` + `dialogMessage`), fallback `""`.
 Запись в sidecar — на `MessagesStorage` queue, не на UI-потоке. Хуки никогда не кидают наружу.
+
+Брендинг (`patches/0002-boss-branding.patch`): имя BOSSgram, `APP_PACKAGE=com.bossgram.messenger`
+(уникальный instal-id, ставится рядом с официальным), иконки `icon_6_*` (генератор `tools/make-icons.py`),
+пункт BossGram в Настройках (id 100 → `BossSettingsActivity`). Namespace модуля намеренно не тронут
+(`ApplicationLoaderImpl` импортирует его BuildConfig). `google-services.json` патчится только App-модуля
+(его читает плагин), значения dummy — под рабочий пуш нужен свой Firebase.
 
 ## Жизнь модуля
 
